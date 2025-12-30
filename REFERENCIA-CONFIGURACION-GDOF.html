@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Referencia de Configuración gDoF</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0e27;
+            --bg-card: #131829;
+            --text-light: #e0e6ed;
+            --text-dim: #8b92a8;
+            --accent-blue: #00d9ff;
+            --accent-orange: #ff6b35;
+            --accent-purple: #9d4edd;
+            --border-color: #1e2742;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Mono', monospace;
+            background: var(--bg-dark);
+            color: var(--text-light);
+            line-height: 1.6;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .doc-code {
+            display: inline-block;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-purple);
+            border: 1px solid var(--accent-purple);
+            padding: 0.4rem 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .main-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-light);
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            margin-top: 0.5rem;
+        }
+
+        /* Intro */
+        .intro-section {
+            background: rgba(157, 78, 221, 0.05);
+            border-left: 4px solid var(--accent-purple);
+            padding: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .intro-section p {
+            margin-bottom: 0.8rem;
+            font-size: 0.95rem;
+        }
+
+        /* Layer Cards */
+        .layer-card {
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            transition: all 0.3s;
+        }
+
+        .layer-card.gdof-layer {
+            border-color: var(--accent-orange);
+        }
+
+        .layer-card.gdof-layer:hover {
+            border-color: var(--accent-orange);
+            box-shadow: 0 0 20px rgba(255, 107, 53, 0.2);
+        }
+
+        .layer-card.ninedof-layer {
+            border-color: var(--accent-blue);
+        }
+
+        .layer-card.ninedof-layer:hover {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 20px rgba(0, 217, 255, 0.2);
+        }
+
+        .layer-card.sixdof-layer {
+            border-color: var(--accent-purple);
+        }
+
+        .layer-card.sixdof-layer:hover {
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 20px rgba(157, 78, 221, 0.2);
+        }
+
+        .layer-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .layer-icon {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            font-weight: 900;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .gdof-layer .layer-icon {
+            color: var(--accent-orange);
+        }
+
+        .ninedof-layer .layer-icon {
+            color: var(--accent-blue);
+        }
+
+        .sixdof-layer .layer-icon {
+            color: var(--accent-purple);
+        }
+
+        .layer-title-block {
+            flex: 1;
+        }
+
+        .layer-name {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .layer-function {
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .gdof-layer .layer-function {
+            color: var(--accent-orange);
+        }
+
+        .ninedof-layer .layer-function {
+            color: var(--accent-blue);
+        }
+
+        .sixdof-layer .layer-function {
+            color: var(--accent-purple);
+        }
+
+        .layer-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .section-label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            color: var(--accent-blue);
+            letter-spacing: 2px;
+            margin-bottom: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        .section-content {
+            color: var(--text-light);
+            font-size: 0.95rem;
+            line-height: 1.8;
+        }
+
+        .section-content ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .section-content ul li {
+            padding-left: 1.5rem;
+            position: relative;
+            margin-bottom: 0.5rem;
+        }
+
+        .section-content ul li:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: var(--accent-blue);
+        }
+
+        .responsibility-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .responsibility-item {
+            background: rgba(0, 217, 255, 0.05);
+            border: 1px solid var(--accent-blue);
+            padding: 1rem;
+            border-radius: 4px;
+        }
+
+        .responsibility-item strong {
+            display: block;
+            color: var(--accent-blue);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        /* Examples */
+        .examples-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 3px solid var(--accent-orange);
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .example-item {
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .example-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .example-label {
+            font-weight: 700;
+            color: var(--accent-orange);
+            margin-bottom: 0.3rem;
+        }
+
+        /* Configuration Template */
+        .config-template {
+            background: var(--bg-card);
+            border: 2px dashed var(--accent-blue);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 3rem 0;
+        }
+
+        .config-template-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.3rem;
+            color: var(--accent-blue);
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .config-item {
+            background: rgba(0, 217, 255, 0.05);
+            border-left: 4px solid var(--accent-orange);
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .config-item:nth-child(2) {
+            border-left-color: var(--accent-blue);
+        }
+
+        .config-item:nth-child(3) {
+            border-left-color: var(--accent-purple);
+        }
+
+        .config-label {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .config-placeholder {
+            color: var(--text-dim);
+            font-style: italic;
+        }
+
+        /* Footer */
+        .footer-note {
+            margin-top: 3rem;
+            padding: 2rem;
+            background: rgba(157, 78, 221, 0.1);
+            border-left: 4px solid var(--accent-purple);
+            text-align: center;
+        }
+
+        .footer-note p {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            color: var(--text-light);
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .layer-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .responsibility-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <!-- Header -->
+        <div class="header">
+            <div class="doc-code">REF. DOC: 6DOF-CONFIG-REFERENCE-V1.0</div>
+            <h1 class="main-title">Referencia de Configuración gDoF</h1>
+            <p class="subtitle">Estructura estandarizada de las tres capas: Propósito, Orientación y Ejecución</p>
+        </div>
+
+        <!-- Intro -->
+        <div class="intro-section">
+            <p><strong>Propósito del documento:</strong> Este documento define formalmente la estructura de configuración gDoF y establece la nomenclatura estándar para su aplicación en cualquier contexto operativo.</p>
+            <p><strong>Uso:</strong> Toda implementación del framework gDoF debe especificar su configuración usando estas tres capas. Esta estructura asegura claridad en la separación de responsabilidades entre el Agente Humano y la IA Factory.</p>
+        </div>
+
+        <!-- CAPA 1: gDoF -->
+        <div class="layer-card gdof-layer">
+            <div class="layer-header">
+                <div class="layer-icon">gDoF</div>
+                <div class="layer-title-block">
+                    <div class="layer-name">Guided Degrees of Freedom</div>
+                    <div class="layer-function">→ PROPÓSITO</div>
+                </div>
+            </div>
+
+            <div class="layer-section">
+                <div class="section-label">Definición</div>
+                <div class="section-content">
+                    La capa gDoF es el nivel de <strong>dirección consciente</strong>. Es donde el Agente Humano define el propósito, establece los criterios de decisión, y determina los límites éticos y estratégicos del sistema. Esta capa responde a la pregunta: <strong>"¿Qué vale la pena hacer?"</strong>
+                </div>
+            </div>
+
+            <div class="layer-section">
+                <div class="section-label">Responsabilidad del Agente Humano</div>
+                <div class="section-content">
+                    En la capa gDoF, el humano actúa como <strong>Controller</strong> del sistema y debe especificar:
+                    <ul>
+                        <li><strong>Criterio estratégico:</strong> Qué objetivos persigue la operación</li>
+                        <li><strong>Intención operativa:</strong> Qué resultado específico se busca</li>
+                        <li><strong>Límites éticos:</strong> Qué está permitido y qué está fuera de los límites</li>
+                        <li><strong>Prioridad de decisión:</strong> Qué variables son críticas vs secundarias</li>
+                        <li><strong>Marco de actuación:</strong> Dentro de qué boundaries debe operar el sistema</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="layer-section">
+                <div class="section-label">Ejemplos de Configuración gDoF</div>
+                <div class="examples-box">
+                    <div class="example-item">
+                        <div class="example-label">Caso: Análisis de Cartera</div>
+                        <div>Definir criterios de materialidad de riesgo: qué eventos crediticios son críticos, qué umbrales de ratios financieros disparan alertas, qué fuentes de información son confiables.</div>
+                    </div>
+                    <div class="example-item">
+                        <div class="example-label">Caso: Reportes Regulatorios</div>
+                        <div>Parametrizar reglas de compliance: qué datos van en cada reporte, qué validaciones cruzadas son obligatorias, qué umbrales regulatorios aplican.</div>
+                    </div>
+                    <div class="example-item">
+                        <div class="example-label">Caso: Comunicación Institucional</div>
+                        <div>Definir estrategia de posicionamiento: qué atributos de marca priorizar, qué tono usar según audiencia, qué mensajes están alineados vs fuera de marca.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="layer-section">
+                <div class="section-label">Criterio de Validación</div>
+                <div class="section-content">
+                    Una configuración gDoF está bien definida cuando puede responder: <strong>"Si la IA presenta 10 opciones, ¿puedo decidir cuál es la mejor según criterios explícitos?"</strong> Si la respuesta es no, el propósito no está suficientemente parametrizado.
+                </div>
+            </div>
+        </div>
+
+        <!-- CAPA 2: 9DoF -->
+        <div class="layer-card ninedof-layer">
+            <div class="layer-header">
+                <div class="layer-icon">9DoF</div>
+                <div class="layer-title-block">
+                    <div class="layer-name">Navigation Degrees of Freedom</div>
+                    <div class="layer-function">→ ORIENTACIÓN</div>
+                </div>
+            </div>
+
+            <div class="layer-section">
+                <div class="section-label">Definición</div>
+                <div class="section-content">
+                    La capa 9DoF es el nivel de <strong>orientación estable</strong>. Es donde el sistema se ancla a referencias externas y reales para evitar la deriva estratégica y el autoengaño. Esta capa responde a la pregunta: <strong>"¿Cómo sé que voy en la dirección correcta?"</strong>
+                </div>
+            </div>
+
+            <div class="layer-section">
+                <div class="section-label">Responsabilidad del Agente Humano</div>
+                <div class="section-content">
+                    En la capa 9DoF, el humano debe establecer <strong>puntos de referencia externos</strong> que el sistema usará para corregir su rumbo:
+                    <ul>
+                        <li><strong>Referencias de mercado:</strong> Benchmarks, indicadores, estándares de industria</li>
+                        <li><strong>Fuentes regulatorias:</strong> Normativas, compliance, marcos legales vigentes</li>
+                        <li><strong>Validadores externos:</strong> Auditorías, feedback de clientes, métricas independientes</li>
+                        <li><strong>Controles de realidad:</strong> Datos objetivos que previenen burbuja de confirmación</li>
+                        <li><strong>Mecanismos de corrección:</strong> Cómo se detecta y corrige la desviación</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="layer-section">
+                <div class="section-label">Ejemplos de Configuración 9DoF</div>
+                <div class="examples-box">
+                    <div class="example-item">
+                        <div class="example-label">Caso: Análisis de Cartera</div>
+                        <div>Referencias de mercado externas: ratings de agencias calificadoras, spreads de bonos comparables, comunicaciones de la CNV, noticias verificadas en medios especializados.</div>
+                    </div>
+                    <div class="example-item">
+                        <div class="example-label">Caso: Reportes Regulatorios</div>
+                        <div>Normativa vigente CNV/BCRA: textos oficiales de regulaciones, actualizaciones normativas, interpretaciones de organismos de control, precedentes de sanciones.</div>
+                    </div>
+                    <div class="example-item">
+                        <div class="example-label">Caso: Comunicación Institucional</div>
+                        <div>Benchmark de competencia: análisis de comunicaciones de competidores líderes, tendencias del sector financiero, feedback directo de clientes, métricas de engagement reales.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="layer-section">
+                <div class="section-label">Criterio de Validación</div>
+                <div class="section-content">
+                    Una configuración 9DoF está bien definida cuando puede responder: <strong>"Si el sistema se desvía del objetivo, ¿qué señal externa me lo indicará?"</strong> Las referencias deben ser verificables, actualizadas y ajenas al sistema mismo.
+                </div>
+            </div>
+        </div>
+
+        <!-- CAPA 3: 6DoF -->
+        <div class="layer-card sixdof-layer">
+            <div class="layer-header">
+                <div class="layer-icon">6DoF</div>
+                <div class="layer-title-block">
+                    <div class="layer-name">Maneuver Degrees of Freedom</div>
+                    <div class="layer-function">→ EJECUCIÓN</div>
+                </div>
+            </div>
+
+            <div class="layer-section">
+                <div class="section-label">Definición</div>
+                <div class="section-content">
+                    La capa 6DoF es el nivel de <strong>ejecución operativa</strong>. Es donde la IA Factory despliega su potencia total de maniobra para ejecutar las operaciones definidas por el propósito (gDoF) y alineadas por la orientación (9DoF). Esta capa responde a la pregunta: <strong>"¿Qué operaciones concretas se ejecutan?"</strong>
+                </div>
+            </div>
+
+            <div class="layer-section">
+                <div class="section-label">Responsabilidad de la IA Factory</div>
+                <div class="section-content">
+                    En la capa 6DoF, la IA actúa con <strong>libertad operativa total</strong> dentro de los límites establecidos:
+                    <ul>
+                        <li><strong>Procesamiento de datos:</strong> Extracción, transformación, consolidación de información</li>
+                        <li><strong>Análisis y cálculo:</strong> Aplicación de algoritmos, modelos, validaciones automáticas</li>
+                        <li><strong>Generación de contenido:</strong> Producción de reportes, documentos, comunicaciones</li>
+                        <li><strong>Ejecución de flujos:</strong> Automatización de procesos según reglas definidas</li>
+                        <li><strong>Maniobra adaptativa:</strong> Ajustes operativos dentro del marco sin requerir intervención humana</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="layer-section">
+                <div class="section-label">Ejemplos de Configuración 6DoF</div>
+                <div class="examples-box">
+                    <div class="example-item">
+                        <div class="example-label">Caso: Análisis de Cartera</div>
+                        <div>IA procesa feeds de información 24/7, extrae métricas clave de balances, monitorea noticias de emisores, calcula ratios financieros, genera alertas cuando se cumplen criterios de materialidad.</div>
+                    </div>
+                    <div class="example-item">
+                        <div class="example-label">Caso: Reportes Regulatorios</div>
+                        <div>IA extrae datos de sistemas fuente, consolida información según templates definidos, aplica reglas de validación cruzada, genera borradores de reportes, ejecuta chequeos de consistencia.</div>
+                    </div>
+                    <div class="example-item">
+                        <div class="example-label">Caso: Comunicación Institucional</div>
+                        <div>IA genera múltiples variantes de contenido según parámetros de marca, adapta tono según canal y audiencia, produce versiones A/B de mensajes, formatea piezas para diferentes plataformas.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="layer-section">
+                <div class="section-label">Criterio de Validación</div>
+                <div class="section-content">
+                    Una configuración 6DoF está bien definida cuando puede responder: <strong>"¿La IA puede ejecutar esta operación de forma autónoma sin intervención humana en cada paso?"</strong> Si requiere decisiones humanas frecuentes, es señal de que gDoF no está suficientemente parametrizado.
+                </div>
+            </div>
+        </div>
+
+        <!-- Plantilla de Configuración -->
+        <div class="config-template">
+            <div class="config-template-title">PLANTILLA DE CONFIGURACIÓN ESTÁNDAR</div>
+            
+            <div class="config-item">
+                <div class="config-label">gDoF → PROPÓSITO</div>
+                <div class="config-placeholder">[Definir: criterios estratégicos, intención operativa, límites éticos, prioridades de decisión]</div>
+            </div>
+
+            <div class="config-item">
+                <div class="config-label">9DoF → ORIENTACIÓN</div>
+                <div class="config-placeholder">[Establecer: referencias externas, fuentes de validación, mecanismos de corrección de deriva]</div>
+            </div>
+
+            <div class="config-item">
+                <div class="config-label">6DoF → EJECUCIÓN</div>
+                <div class="config-placeholder">[Especificar: operaciones de IA Factory, flujos automatizados, capacidades de maniobra]</div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer-note">
+            <p>"Esta estructura de tres capas asegura que cada implementación de gDoF tenga claridad en: qué decide el humano (PROPÓSITO), qué valida el sistema (ORIENTACIÓN), y qué ejecuta la IA (EJECUCIÓN)."</p>
+        </div>
+
+    </div>
+</body>
+</html>

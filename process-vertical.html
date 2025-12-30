@@ -1,0 +1,63 @@
+<!-- Row 7: Proceso - Versión Vertical Enumerada -->
+<div class="spec-row">
+    <div class="spec-label">PROCESO</div>
+    <div class="spec-content">
+        <div class="process-vertical">
+            <div class="process-item">
+                <span class="process-num">①</span>
+                <span class="process-text">Definir marco</span>
+            </div>
+            <div class="process-item">
+                <span class="process-num">②</span>
+                <span class="process-text">Aplicar gDoF (criterio, intención, límites)</span>
+            </div>
+            <div class="process-item">
+                <span class="process-num">③</span>
+                <span class="process-text">Parametrizar variables</span>
+            </div>
+            <div class="process-item">
+                <span class="process-num">④</span>
+                <span class="process-text">Activar operación (6DoF)</span>
+            </div>
+            <div class="process-item">
+                <span class="process-num">⑤</span>
+                <span class="process-text">Mantener orientación estable (9DoF)</span>
+            </div>
+            <div class="process-item">
+                <span class="process-num">⑥</span>
+                <span class="process-text">Iterar y corregir</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- CSS - AGREGAR EN <style> -->
+<!-- ============================================ -->
+
+/* Process Vertical Styling */
+.process-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.process-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.process-num {
+    color: var(--accent-blue);
+    font-size: 1.2rem;
+    font-weight: 700;
+    min-width: 30px;
+    flex-shrink: 0;
+}
+
+.process-text {
+    color: var(--text-light);
+    line-height: 1.5;
+}

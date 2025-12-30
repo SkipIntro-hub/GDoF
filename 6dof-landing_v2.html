@@ -1,0 +1,3656 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6DoF - El Sistema Operativo Humano</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@400;700&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+	<style>
+        :root {
+            --primary-dark: #0a1929;
+            --secondary-dark: #132f4c;
+            --accent-orange: #ff6b35;
+            --accent-amber: #f7931e;
+            --accent-blue: #4fc3f7;
+            --text-light: #e0e7ff;
+            --text-dim: #8b9dc3;
+            --grid-color: rgba(79, 195, 247, 0.1);
+            --glow: rgba(255, 107, 53, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--primary-dark);
+            color: var(--text-light);
+            overflow-x: hidden;
+            line-height: 1.7;
+        }
+
+        /* Technical Grid Background */
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.3;
+        }
+
+        .scan-line {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
+            box-shadow: 0 0 20px var(--accent-blue);
+            animation: scan 8s linear infinite;
+            z-index: 1;
+            opacity: 0.3;
+        }
+
+        @keyframes scan {
+            from { transform: translateY(0); }
+            to { transform: translateY(100vh); }
+        }
+
+        /* Header */
+        header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 2rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            background: rgba(10, 25, 41, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--grid-color);
+        }
+
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-amber));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px var(--glow);
+            letter-spacing: 0.1em;
+        }
+
+        nav {
+            display: flex;
+            gap: 2rem;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        nav a {
+            color: var(--text-dim);
+            text-decoration: none;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        nav a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--accent-orange);
+            transition: width 0.3s;
+        }
+
+        nav a:hover {
+            color: var(--accent-orange);
+        }
+
+        nav a:hover::after {
+            width: 100%;
+        }
+
+        /* Hero Section */
+        .hero {
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8rem 5% 4rem;
+            overflow: hidden;
+        }
+
+        .hero-content {
+            max-width: 1400px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-text h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 4.5rem;
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            color: var(--text-light);
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .hero-text h1 .highlight {
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-amber));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: block;
+            filter: drop-shadow(0 0 30px var(--glow));
+        }
+
+        .hero-text .subtitle {
+            font-size: 1.3rem;
+            color: var(--text-dim);
+            margin-bottom: 2rem;
+            font-weight: 300;
+            animation: fadeInUp 1s ease-out 0.2s backwards;
+        }
+
+        .hero-text .tagline {
+            font-family: 'Space Mono', monospace;
+            font-size: 1.1rem;
+            color: var(--accent-blue);
+            border-left: 3px solid var(--accent-orange);
+            padding-left: 1.5rem;
+            margin-bottom: 3rem;
+            animation: fadeInUp 1s ease-out 0.4s backwards;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 1.2rem 3rem;
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-amber));
+            color: var(--primary-dark);
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+            animation: fadeInUp 1s ease-out 0.6s backwards;
+        }
+
+        .cta-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.3);
+            transition: left 0.5s;
+        }
+
+        .cta-button:hover::before {
+            left: 100%;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px var(--glow);
+        }
+
+        .hero-visual {
+            position: relative;
+            height: 600px;
+            animation: fadeIn 1.5s ease-out 0.8s backwards;
+        }
+
+        .rotating-diagram {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .axis-system {
+            width: 400px;
+            height: 400px;
+            position: relative;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+
+        .axis {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-origin: center;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .axis.x {
+            width: 300px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-orange), transparent);
+            transform: translate(-50%, -50%) rotate(0deg);
+            animation-delay: 0s;
+        }
+
+        .axis.y {
+            width: 2px;
+            height: 300px;
+            background: linear-gradient(180deg, transparent, var(--accent-amber), transparent);
+            transform: translate(-50%, -50%);
+            animation-delay: 0.5s;
+        }
+
+        .axis.z {
+            width: 300px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
+            transform: translate(-50%, -50%) rotate(60deg);
+            animation-delay: 1s;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; box-shadow: 0 0 20px currentColor; }
+        }
+
+        .coordinate-label {
+            position: absolute;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--accent-orange);
+            text-shadow: 0 0 10px var(--glow);
+        }
+
+        .coordinate-label.x { top: 50%; right: 0; transform: translateY(-50%); }
+        .coordinate-label.y { top: 0; left: 50%; transform: translateX(-50%); }
+        .coordinate-label.z { bottom: 0; right: 20%; }
+
+        /* Section Styles */
+        section {
+            position: relative;
+            padding: 8rem 5%;
+            z-index: 2;
+        }
+
+        .section-header {
+            text-align: center;
+            max-width: 900px;
+            margin: 0 auto 5rem;
+        }
+
+        .section-header .label {
+            font-family: 'Space Mono', monospace;
+            color: var(--accent-orange);
+            font-size: 0.9rem;
+            letter-spacing: 0.2em;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+        }
+
+        .section-header h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+        }
+
+        .section-header p {
+            font-size: 1.1rem;
+            color: var(--text-dim);
+            line-height: 1.8;
+        }
+
+        /* Paradigm Section */
+        .paradigm-shift {
+            background: linear-gradient(180deg, var(--primary-dark), var(--secondary-dark));
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 4rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .comparison-card {
+            padding: 3rem;
+            border: 2px solid var(--grid-color);
+            background: rgba(19, 47, 76, 0.5);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.5s;
+        }
+
+        .comparison-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(79, 195, 247, 0.1), transparent);
+            transition: left 0.8s;
+        }
+
+        .comparison-card:hover::before {
+            left: 100%;
+        }
+
+        .comparison-card:hover {
+            border-color: var(--accent-orange);
+            transform: translateY(-10px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .comparison-card h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent-orange);
+        }
+
+        .comparison-card .icon {
+            font-size: 4rem;
+            margin-bottom: 2rem;
+            opacity: 0.6;
+        }
+
+        .comparison-card ul {
+            list-style: none;
+            margin-top: 2rem;
+        }
+
+        .comparison-card ul li {
+            padding: 0.8rem 0;
+            padding-left: 2rem;
+            position: relative;
+            color: var(--text-dim);
+        }
+
+        .comparison-card ul li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--accent-amber);
+            font-weight: bold;
+        }
+
+        /* Architecture Section */
+        .architecture {
+            background: var(--secondary-dark);
+        }
+
+        .architecture-diagram {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: stretch; 
+        }
+
+        .role-card {
+            background: rgba(10, 25, 41, 0.8);
+            border: 2px solid var(--accent-orange);
+            padding: 3rem;
+            position: relative;
+        }
+
+        .role-card::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-amber));
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .role-card:hover::after {
+            opacity: 0.2;
+        }
+
+        .role-card h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--accent-orange);
+        }
+
+        .role-card .subtitle {
+            color: var(--accent-blue);
+            font-family: 'Space Mono', monospace;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .role-card p {
+            color: var(--text-dim);
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+
+        /* 6DoF Layers */
+        .layers-section {
+            background: linear-gradient(180deg, var(--secondary-dark), var(--primary-dark));
+        }
+
+        .layers-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 3rem;
+            max-width: 1400px;
+            margin: 4rem auto 0;
+        }
+
+        .layer-card {
+            background: rgba(19, 47, 76, 0.5);
+            border: 2px solid var(--grid-color);
+            padding: 2.5rem;
+            position: relative;
+            transition: all 0.4s;
+        }
+
+        .layer-card::before {
+            content: attr(data-axis);
+            position: absolute;
+            top: -1rem;
+            left: 2rem;
+            background: var(--primary-dark);
+            color: var(--accent-orange);
+            padding: 0.5rem 1rem;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            border: 2px solid var(--accent-orange);
+        }
+
+        .layer-card:hover {
+            transform: translateY(-10px) scale(1.05);
+            border-color: var(--accent-orange);
+            box-shadow: 0 20px 40px rgba(255, 107, 53, 0.3);
+        }
+
+        .layer-card h4 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-light);
+        }
+
+        .layer-card .description {
+            color: var(--text-dim);
+            font-size: 0.95rem;
+            line-height: 1.7;
+            margin-bottom: 1.5rem;
+        }
+
+        .layer-card .example {
+            color: var(--accent-blue);
+            font-size: 0.85rem;
+            font-style: italic;
+            padding-top: 1rem;
+            border-top: 1px solid var(--grid-color);
+        }
+
+        /* Process Section */
+        .process-section {
+            background: var(--primary-dark);
+        }
+
+        .process-flow {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        
+        .process-step {
+            background: rgba(19, 47, 76, 0.6);
+            border: 2px solid var(--grid-color);
+            padding: 3rem 2rem;
+            text-align: center;
+            position: relative;
+            transition: all 0.4s;
+        }
+
+        .process-step::before {
+            content: attr(data-number);
+            position: absolute;
+            top: -2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4rem;
+            height: 4rem;
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-amber));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            font-size: 1.8rem;
+            color: var(--primary-dark);
+            box-shadow: 0 0 30px var(--glow);
+        }
+
+        .process-step:hover {
+            transform: translateY(-15px);
+            border-color: var(--accent-orange);
+        }
+
+        .process-step h4 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            margin: 2rem 0 1rem;
+            color: var(--text-light);
+        }
+
+        .process-step p {
+            color: var(--text-dim);
+            line-height: 1.7;
+        }
+
+        /* Manifesto Section */
+        .manifesto {
+            background: linear-gradient(180deg, var(--primary-dark), var(--secondary-dark));
+            padding: 10rem 5%;
+        }
+
+        .manifesto-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .manifesto h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 4rem;
+            font-weight: 900;
+            line-height: 1.3;
+            margin-bottom: 3rem;
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-amber), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .manifesto-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            margin: 4rem 0;
+            text-align: left;
+        }
+
+        .manifesto-item {
+            background: rgba(19, 47, 76, 0.4);
+            border-left: 4px solid var(--accent-orange);
+            padding: 2rem;
+            transition: all 0.3s;
+        }
+
+        .manifesto-item:hover {
+            background: rgba(19, 47, 76, 0.7);
+            border-left-width: 8px;
+            transform: translateX(10px);
+        }
+
+        .manifesto-item .number {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--accent-amber);
+            margin-bottom: 1rem;
+        }
+
+        .manifesto-item p {
+            color: var(--text-light);
+            line-height: 1.7;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--primary-dark);
+            border-top: 2px solid var(--grid-color);
+            padding: 4rem 5%;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        footer .footer-logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-amber));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 2rem;
+        }
+
+        footer p {
+            color: var(--text-dim);
+            margin-bottom: 1rem;
+        }
+
+        footer .social-links {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        footer .social-links a {
+            color: var(--text-dim);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        footer .social-links a:hover {
+            color: var(--accent-orange);
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hero-content {
+                grid-template-columns: 1fr;
+                gap: 3rem;
+            }
+
+            .hero-text h1 {
+                font-size: 3rem;
+            }
+
+            .comparison-grid,
+            .architecture-diagram,
+            .layers-grid,
+            .process-flow,
+            .manifesto-list {
+                grid-template-columns: 1fr;
+            }
+
+            .process-flow::before {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 1.5rem 5%;
+            }
+
+            .logo {
+                font-size: 1.5rem;
+            }
+
+            nav {
+                display: none;
+            }
+
+            .hero-text h1 {
+                font-size: 2.5rem;
+            }
+
+            .section-header h2 {
+                font-size: 2rem;
+            }
+
+            section {
+                padding: 4rem 5%;
+            }
+        }
+		/* Audio Library Section */
+.audio-library {
+    background: linear-gradient(180deg, var(--secondary-dark), var(--primary-dark));
+    position: relative;
+}
+
+.audio-library::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-orange), transparent);
+}
+
+.audio-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.audio-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 2rem;
+    margin-top: 4rem;
+}
+
+.audio-card {
+    background: rgba(19, 47, 76, 0.6);
+    border: 2px solid var(--grid-color);
+    padding: 2rem;
+    position: relative;
+    transition: all 0.4s;
+    overflow: hidden;
+}
+
+.audio-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 0;
+    background: linear-gradient(180deg, var(--accent-orange), var(--accent-amber));
+    transition: height 0.4s;
+}
+
+.audio-card:hover {
+    border-color: var(--accent-orange);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(255, 107, 53, 0.2);
+}
+
+.audio-card:hover::before {
+    height: 100%;
+}
+
+.audio-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.audio-icon {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, var(--accent-orange), var(--accent-amber));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    flex-shrink: 0;
+    box-shadow: 0 0 20px var(--glow);
+    animation: pulse-icon 3s ease-in-out infinite;
+}
+
+@keyframes pulse-icon {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 20px var(--glow);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 30px var(--glow);
+    }
+}
+
+.audio-info h4 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.4rem;
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+}
+
+.audio-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+}
+
+.audio-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.audio-description {
+    color: var(--text-dim);
+    line-height: 1.7;
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+}
+
+.audio-player {
+    background: rgba(10, 25, 41, 0.8);
+    border: 1px solid var(--grid-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.audio-player audio {
+    width: 100%;
+    height: 40px;
+    outline: none;
+}
+
+/* Custom audio controls styling */
+.audio-player audio::-webkit-media-controls-panel {
+    background: var(--primary-dark);
+}
+
+.audio-player audio::-webkit-media-controls-play-button {
+    background-color: var(--accent-orange);
+    border-radius: 50%;
+}
+
+.audio-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.audio-btn {
+    flex: 1;
+    padding: 0.8rem 1.5rem;
+    border: 2px solid var(--accent-orange);
+    background: transparent;
+    color: var(--accent-orange);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+}
+
+.audio-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: var(--accent-orange);
+    transition: width 0.4s, height 0.4s, top 0.4s, left 0.4s;
+    transform: translate(-50%, -50%);
+    z-index: -1;
+}
+
+.audio-btn:hover {
+    color: var(--primary-dark);
+    border-color: var(--accent-amber);
+}
+
+.audio-btn:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.audio-btn.primary {
+    background: linear-gradient(135deg, var(--accent-orange), var(--accent-amber));
+    color: var(--primary-dark);
+    border: none;
+}
+
+.audio-btn.primary::before {
+    background: var(--accent-amber);
+}
+
+.audio-tag {
+    display: inline-block;
+    padding: 0.3rem 0.8rem;
+    background: rgba(79, 195, 247, 0.2);
+    border: 1px solid var(--accent-blue);
+    color: var(--accent-blue);
+    font-size: 0.75rem;
+    font-family: 'Space Mono', monospace;
+    margin-top: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+/* Featured Audio Highlight */
+.audio-card.featured {
+    grid-column: span 2;
+    background: linear-gradient(135deg, rgba(255, 107, 53, 0.1), rgba(247, 147, 30, 0.1));
+    border: 2px solid var(--accent-orange);
+}
+
+.audio-card.featured .audio-icon {
+    width: 80px;
+    height: 80px;
+    font-size: 2.5rem;
+}
+
+.audio-card.featured h4 {
+    font-size: 1.8rem;
+}
+
+.featured-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: linear-gradient(135deg, var(--accent-orange), var(--accent-amber));
+    color: var(--primary-dark);
+    padding: 0.4rem 1rem;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+}
+
+/* Loading State */
+.audio-loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(79, 195, 247, 0.3);
+    border-radius: 50%;
+    border-top-color: var(--accent-blue);
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .audio-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .audio-card.featured {
+        grid-column: span 1;
+    }
+    
+    .audio-actions {
+        flex-direction: column;
+    }
+}
+		/* Technical Specifications Section */
+.tech-specs-section {
+    background: linear-gradient(180deg, var(--secondary-dark), var(--primary-dark));
+    padding: 6rem 5%;
+    position: relative;
+    border-top: 1px solid rgba(79, 195, 247, 0.2);
+    border-bottom: 1px solid rgba(79, 195, 247, 0.2);
+}
+
+.specs-table {
+    background: rgba(19, 47, 76, 0.4);
+    border: 2px solid var(--grid-color);
+    overflow: hidden;
+}
+
+.spec-row {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    border-bottom: 1px solid var(--grid-color);
+    transition: background 0.3s;
+}
+
+.spec-row:last-child {
+    border-bottom: none;
+}
+
+.spec-row:hover {
+    background: rgba(79, 195, 247, 0.05);
+}
+
+.spec-row.highlighted {
+    background: rgba(255, 107, 53, 0.1);
+    border-top: 2px solid var(--accent-orange);
+    border-bottom: 2px solid var(--accent-orange);
+}
+
+.spec-label {
+    background: rgba(10, 25, 41, 0.8);
+    padding: 1.5rem;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--accent-blue);
+    letter-spacing: 0.1em;
+    border-right: 2px solid var(--grid-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.3;
+}
+
+.spec-content {
+    padding: 1.5rem 2rem;
+    color: var(--text-light);
+    line-height: 1.8;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+}
+
+.spec-tag {
+    display: inline-block;
+    background: rgba(79, 195, 247, 0.15);
+    border: 1px solid var(--accent-blue);
+    color: var(--accent-blue);
+    padding: 0.3rem 0.8rem;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+    font-family: 'Space Mono', monospace;
+    border-radius: 3px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .spec-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .spec-label {
+        border-right: none;
+        border-bottom: 1px solid var(--grid-color);
+        padding: 1rem;
+    }
+    
+    .spec-content {
+        padding: 1.5rem;
+        display: block;
+    }
+}
+		... (otros estilos)
+
+/* FAQ Section */
+.faq-section {
+    background: linear-gradient(180deg, var(--primary-dark), var(--secondary-dark));
+    padding: 8rem 5%;
+    position: relative;
+}
+... (resto de estilos FAQ)
+
+/* End-to-End Flow Section */
+.flow-diagram-section {
+    background: linear-gradient(180deg, var(--secondary-dark), var(--primary-dark));
+    padding: 8rem 5%;
+    position: relative;
+    border-top: 1px solid rgba(79, 195, 247, 0.2);
+}
+
+.flow-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin: 0 auto;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 2rem 0;
+}
+
+.flow-box {
+    background: rgba(19, 47, 76, 0.6);
+    border: 2px solid var(--grid-color);
+    padding: 2rem 1.5rem;
+    min-width: 200px;
+    max-width: 220px;
+    position: relative;
+    transition: all 0.4s;
+}
+
+.flow-box:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+}
+
+.input-box {
+    border-color: var(--accent-orange);
+    background: rgba(255, 107, 53, 0.1);
+}
+
+.input-box:hover {
+    border-color: var(--accent-amber);
+    box-shadow: 0 15px 40px rgba(255, 107, 53, 0.3);
+}
+
+.human-box {
+    border-color: var(--accent-blue);
+    background: rgba(79, 195, 247, 0.1);
+}
+
+.human-box:hover {
+    border-color: var(--accent-blue);
+    box-shadow: 0 15px 40px rgba(79, 195, 247, 0.3);
+}
+
+.ai-box {
+    border-color: var(--accent-amber);
+    background: rgba(247, 147, 30, 0.1);
+}
+
+.ai-box:hover {
+    border-color: var(--accent-orange);
+    box-shadow: 0 15px 40px rgba(247, 147, 30, 0.3);
+}
+
+.validation-box {
+    border-color: var(--accent-blue);
+    background: rgba(79, 195, 247, 0.1);
+}
+
+.validation-box:hover {
+    border-color: var(--accent-blue);
+    box-shadow: 0 15px 40px rgba(79, 195, 247, 0.3);
+}
+
+.flow-label {
+    position: absolute;
+    top: -0.8rem;
+    left: 1rem;
+    background: var(--primary-dark);
+    padding: 0.3rem 0.8rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent-orange);
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    border: 1px solid var(--grid-color);
+}
+
+.flow-content {
+    text-align: center;
+}
+
+.flow-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    color: var(--accent-orange);
+}
+
+.flow-icon i {
+    display: block;
+}
+
+.human-box .flow-icon {
+    color: var(--accent-blue);
+}
+
+.ai-box .flow-icon {
+    color: var(--accent-amber);
+}
+
+.validation-box .flow-icon {
+    color: var(--accent-blue);
+}
+
+.loop-arrow {
+    font-size: 3rem;
+    color: var(--accent-orange);
+    margin: 1rem 0;
+    animation: rotate-loop 2s ease-in-out infinite;
+}
+
+.loop-arrow i {
+    display: block;
+}
+
+
+.flow-content h4 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.1rem;
+    color: var(--text-light);
+    margin-bottom: 0.8rem;
+    line-height: 1.3;
+}
+
+.flow-content p {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.flow-arrow {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    flex-shrink: 0;
+}
+
+.arrow-line {
+    width: 40px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent-orange), var(--accent-blue));
+}
+
+.arrow-head {
+    color: var(--accent-blue);
+    font-size: 1.5rem;
+    font-weight: 300;
+}
+
+/* Decision Branch */
+.decision-branch {
+    margin-top: 3rem;
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.branch-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+}
+
+.branch-path {
+    background: rgba(19, 47, 76, 0.4);
+    border: 2px solid var(--grid-color);
+    padding: 3rem 2rem;
+    text-align: center;
+    position: relative;
+    transition: all 0.3s;
+    min-height: 320px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.fail-path {
+    border-color: var(--accent-orange);
+    background: rgba(255, 107, 53, 0.05);
+}
+
+.fail-path:hover {
+    border-color: var(--accent-orange);
+    box-shadow: 0 10px 30px rgba(255, 107, 53, 0.2);
+    transform: translateY(-5px);
+}
+
+.success-path {
+    border-color: var(--accent-blue);
+    background: rgba(79, 195, 247, 0.05);
+}
+
+.success-path:hover {
+    border-color: var(--accent-blue);
+    box-shadow: 0 10px 30px rgba(79, 195, 247, 0.2);
+    transform: translateY(-5px);
+}
+
+.branch-label {
+    position: absolute;
+    top: -0.8rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--primary-dark);
+    padding: 0.4rem 1.5rem;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    border: 2px solid;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.fail-label {
+    color: var(--accent-orange);
+    border-color: var(--accent-orange);
+}
+
+.success-label {
+    color: var(--accent-blue);
+    border-color: var(--accent-blue);
+}
+
+.branch-content {
+    padding: 1rem 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    flex: 1;
+}
+
+.branch-icon-box {
+    width: 100%;
+    padding: 1rem 0;
+}
+
+.branch-main-icon {
+    font-size: 4rem;
+    margin: 0 auto;
+    width: 120px;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 3px solid;
+}
+
+.fail-icon {
+    color: var(--accent-orange);
+    border-color: var(--accent-orange);
+    background: rgba(255, 107, 53, 0.1);
+    animation: rotate-loop 2s ease-in-out infinite;
+}
+
+.success-icon {
+    color: var(--accent-blue);
+    border-color: var(--accent-blue);
+    background: rgba(79, 195, 247, 0.1);
+}
+
+@keyframes rotate-loop {
+    0%, 100% {
+        transform: rotate(0deg);
+    }
+    50% {
+        transform: rotate(180deg);
+    }
+}
+
+.branch-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.fail-path .branch-title {
+    color: var(--accent-orange);
+}
+
+.success-path .branch-title {
+    color: var(--accent-blue);
+}
+
+.branch-description {
+    color: var(--text-dim);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin: 0;
+    font-family: 'Space Mono', monospace;
+}
+
+.branch-action {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    padding: 0.8rem 1.5rem;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-top: auto;
+}
+
+.fail-path .branch-action {
+    color: var(--accent-orange);
+    background: rgba(255, 107, 53, 0.1);
+    border: 1px solid var(--accent-orange);
+}
+
+.success-path .branch-action {
+    color: var(--accent-blue);
+    background: rgba(79, 195, 247, 0.1);
+    border: 1px solid var(--accent-blue);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .flow-diagram {
+        flex-wrap: wrap;
+        gap: 2rem;
+    }
+    
+    .flow-arrow {
+        display: none;
+    }
+    
+    .flow-box {
+        max-width: 250px;
+    }
+}
+
+@media (max-width: 768px) {
+    .flow-diagram {
+        flex-direction: column;
+    }
+    
+    .flow-box {
+        max-width: 100%;
+        width: 100%;
+    }
+    
+    .branch-container {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+}
+		/* SO Humano Comparison Section */
+.so-comparison-section {
+    margin-top: 6rem;
+    padding: 4rem 0;
+    border-top: 2px solid rgba(79, 195, 247, 0.2);
+}
+
+.so-comparison-header {
+    text-align: center;
+    margin-bottom: 4rem;
+}
+
+.so-comparison-header h3 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2rem;
+    color: var(--text-light);
+    margin-bottom: 1.5rem;
+    line-height: 1.3;
+}
+
+.so-intro {
+    max-width: 900px;
+    margin: 0 auto;
+    color: var(--text-dim);
+    line-height: 1.8;
+    font-size: 1rem;
+}
+
+.so-intro strong {
+    color: var(--accent-blue);
+    font-weight: 600;
+}
+
+.so-comparison-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.so-column {
+    background: rgba(19, 47, 76, 0.4);
+    border: 2px solid;
+    padding: 2.5rem 2rem;
+    border-radius: 4px;
+}
+
+.so-classic {
+    border-color: var(--accent-orange);
+    background: linear-gradient(180deg, rgba(255, 107, 53, 0.05), rgba(19, 47, 76, 0.4));
+}
+
+.so-augmented {
+    border-color: var(--accent-blue);
+    background: linear-gradient(180deg, rgba(79, 195, 247, 0.05), rgba(19, 47, 76, 0.4));
+}
+
+.so-column-header {
+    text-align: center;
+    padding-bottom: 2rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid rgba(79, 195, 247, 0.2);
+}
+
+.so-column-header h4 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.3rem;
+    margin: 0;
+}
+
+.so-classic .so-column-header h4 {
+    color: var(--accent-orange);
+}
+
+.so-augmented .so-column-header h4 {
+    color: var(--accent-blue);
+}
+
+.so-item {
+    margin-bottom: 2.5rem;
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+}
+
+.so-item:last-child {
+    margin-bottom: 0;
+}
+
+.so-item-icon {
+    font-size: 2rem;
+    min-width: 50px;
+    text-align: center;
+    padding-top: 0.3rem;
+}
+
+.so-classic .so-item-icon {
+    color: var(--accent-orange);
+}
+
+.so-augmented .so-item-icon {
+    color: var(--accent-blue);
+}
+
+.so-item-content {
+    flex: 1;
+}
+
+.so-item-content h5 {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0 0 0.5rem 0;
+}
+
+.so-item-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-light);
+    margin: 0 0 0.8rem 0;
+    line-height: 1.3;
+}
+
+.so-item-desc {
+    color: var(--text-dim);
+    line-height: 1.6;
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+/* Balance Component */
+.so-balance {
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+.balance-side {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
+    text-align: center;
+}
+
+.balance-icon {
+    font-size: 1.5rem;
+}
+
+.risk-side .balance-icon {
+    color: #ff4444;
+}
+
+.opportunity-side .balance-icon {
+    color: #4caf50;
+}
+
+.balance-label {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    line-height: 1.4;
+}
+
+.balance-center {
+    font-size: 2rem;
+    min-width: 40px;
+    text-align: center;
+    filter: grayscale(50%);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .so-comparison-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+    
+    .so-comparison-section {
+        margin-top: 4rem;
+        padding: 3rem 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .so-item {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .so-item-icon {
+        font-size: 1.5rem;
+    }
+    
+    .so-balance {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    
+    .balance-center {
+        transform: rotate(90deg);
+    }
+    
+    .so-comparison-header h3 {
+        font-size: 1.5rem;
+    }
+}
+		/* Upgrade Mental Section */
+.upgrade-mental-section {
+    margin-top: 5rem;
+    padding-top: 4rem;
+    border-top: 2px solid rgba(79, 195, 247, 0.3);
+}
+
+.upgrade-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.upgrade-header h3 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2rem;
+    background: linear-gradient(135deg, var(--accent-orange), var(--accent-blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 1rem;
+}
+
+.upgrade-header p {
+    color: var(--text-dim);
+    font-size: 1.1rem;
+}
+
+/* Boot Sequence */
+.boot-sequence {
+    background: rgba(19, 47, 76, 0.5);
+    border: 2px solid var(--accent-blue);
+    padding: 3rem 2rem;
+    border-radius: 4px;
+}
+
+.boot-sequence-title {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.boot-label {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent-orange);
+    border: 1px solid var(--accent-orange);
+    padding: 0.3rem 0.8rem;
+    margin-bottom: 1rem;
+    letter-spacing: 0.1em;
+}
+
+.boot-sequence-title h4 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    color: var(--text-light);
+    margin-top: 1rem;
+}
+
+.boot-steps {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+.boot-step {
+    background: rgba(19, 47, 76, 0.6);
+    border: 2px solid;
+    padding: 2rem 1.5rem;
+    width: 240px;
+    min-height: 380px;
+    position: relative;
+    transition: all 0.3s;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.boot-step:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* Step Colors */
+.step-orange {
+    border-color: var(--accent-orange);
+    background: linear-gradient(180deg, rgba(255, 107, 53, 0.1), rgba(19, 47, 76, 0.6));
+}
+
+.step-purple {
+    border-color: #9c27b0;
+    background: linear-gradient(180deg, rgba(156, 39, 176, 0.1), rgba(19, 47, 76, 0.6));
+}
+
+.step-blue {
+    border-color: #1976d2;
+    background: linear-gradient(180deg, rgba(25, 118, 210, 0.1), rgba(19, 47, 76, 0.6));
+}
+
+.step-gold {
+    border-color: #d4a574;
+    background: linear-gradient(180deg, rgba(212, 165, 116, 0.1), rgba(19, 47, 76, 0.6));
+}
+
+.step-orange:hover {
+    border-color: var(--accent-amber);
+    box-shadow: 0 10px 30px rgba(255, 107, 53, 0.3);
+}
+
+.step-purple:hover {
+    box-shadow: 0 10px 30px rgba(156, 39, 176, 0.3);
+}
+
+.step-blue:hover {
+    box-shadow: 0 10px 30px rgba(25, 118, 210, 0.3);
+}
+
+.step-gold:hover {
+    box-shadow: 0 10px 30px rgba(212, 165, 116, 0.3);
+}
+
+.step-number {
+    position: absolute;
+    top: -1rem;
+    left: 1rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 1.2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-dark);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.step-orange .step-number {
+    background: var(--accent-orange);
+}
+
+.step-purple .step-number {
+    background: #9c27b0;
+}
+
+.step-blue .step-number {
+    background: #1976d2;
+}
+
+.step-gold .step-number {
+    background: #d4a574;
+}
+
+.step-icon {
+    font-size: 3rem;
+    margin: 1rem 0 1.5rem;
+}
+
+.step-orange .step-icon {
+    color: var(--accent-orange);
+}
+
+.step-purple .step-icon {
+    color: #9c27b0;
+}
+
+.step-blue .step-icon {
+    color: #1976d2;
+}
+
+.step-gold .step-icon {
+    color: #d4a574;
+}
+
+.step-content {
+    text-align: center;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.step-content h5 {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.step-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-light);
+    margin: 0;
+    line-height: 1.3;
+}
+
+.step-desc {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.boot-arrow {
+    font-size: 2rem;
+    color: var(--accent-blue);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+
+.system-ready {
+    background: linear-gradient(135deg, rgba(79, 195, 247, 0.2), rgba(19, 47, 76, 0.8));
+    border: 3px solid var(--accent-blue);
+    padding: 2rem 1.5rem;
+    width: 240px;
+    min-height: 380px;
+    border-radius: 4px;
+    text-align: center;
+    box-shadow: 0 0 40px rgba(79, 195, 247, 0.4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.system-ready::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: 
+        repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 2px,
+            rgba(79, 195, 247, 0.03) 2px,
+            rgba(79, 195, 247, 0.03) 4px
+        );
+    pointer-events: none;
+}
+
+.ready-icon {
+    font-size: 4rem;
+    color: var(--accent-blue);
+    margin-bottom: 1.5rem;
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.1);
+    }
+}
+
+.ready-content {
+    position: relative;
+    z-index: 1;
+}
+
+.ready-content h5 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--accent-blue);
+    margin: 0;
+    letter-spacing: 0.2em;
+}
+
+.ready-content h4 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--accent-blue);
+    margin: 0.5rem 0 1.5rem;
+    text-shadow: 0 0 20px rgba(79, 195, 247, 0.5);
+}
+
+.ready-items {
+    margin-top: 1rem;
+}
+
+.ready-items p {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    line-height: 1.8;
+    margin: 0.5rem 0;
+}
+
+/* Responsive */
+@media (max-width: 1400px) {
+    .boot-steps {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .boot-arrow {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .boot-step,
+    .system-ready {
+        width: 100%;
+        max-width: 320px;
+        min-height: 340px;
+    }
+}
+
+/* Responsive */
+@media (max-width: 1400px) {
+    .boot-steps {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .boot-arrow {
+        display: none;
+    }
+    
+    .boot-step,
+    .system-ready {
+        max-width: 280px;
+    }
+}
+
+@media (max-width: 768px) {
+    .upgrade-header h3 {
+        font-size: 1.5rem;
+    }
+    
+    .boot-sequence {
+        padding: 2rem 1rem;
+    }
+    
+    .boot-sequence-title h4 {
+        font-size: 1.2rem;
+    }
+    
+    .boot-step,
+    .system-ready {
+        width: 100%;
+        max-width: 100%;
+    }
+}
+/* Process Vertical Styling */
+.process-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.process-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.process-num {
+    color: var(--accent-blue);
+    font-size: 1.2rem;
+    font-weight: 700;
+    min-width: 30px;
+    flex-shrink: 0;
+}
+
+.process-text {
+    color: var(--text-light);
+    line-height: 1.5;
+}
+/* Variables de color (ajusta según tu landing) */
+    :root {
+        --bg-card: #131829;
+        --text-light: #e0e6ed;
+        --text-dim: #8b92a8;
+        --accent-blue: #00d9ff;
+        --accent-orange: #ff6b35;
+        --accent-purple: #9d4edd;
+    }
+
+    /* Estilos del componente */
+    .config-template {
+        background: var(--bg-card);
+        border: 2px dashed var(--accent-blue);
+        border-radius: 8px;
+        padding: 2rem;
+        margin: 3rem 0;
+    }
+
+    .config-template-title {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 1.3rem;
+        color: var(--accent-blue);
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+
+    .config-item {
+        background: rgba(0, 217, 255, 0.05);
+        border-left: 4px solid var(--accent-orange);
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    /* Color naranja para gDoF (primer item) */
+    .config-item:nth-child(2) {
+        border-left-color: var(--accent-blue);
+    }
+
+    /* Color azul para 9DoF (segundo item) */
+    .config-item:nth-child(3) {
+        border-left-color: var(--accent-purple);
+    }
+
+    /* Color púrpura para 6DoF (tercer item) */
+    .config-label {
+        font-family: 'Orbitron', sans-serif;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        font-size: 1rem;
+        color: var(--text-light);
+    }
+
+    .config-placeholder {
+        color: var(--text-dim);
+        font-style: italic;
+        font-size: 0.9rem;
+    }
+
+    /* Footer note */
+    .config-footer-note {
+        margin-top: 3rem;
+        padding: 2rem;
+        background: rgba(157, 78, 221, 0.1);
+        border-left: 4px solid var(--accent-purple);
+        text-align: center;
+    }
+
+    .config-footer-note p {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 1.1rem;
+        color: var(--text-light);
+        margin: 0;
+        line-height: 1.6;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .config-template {
+            padding: 1.5rem;
+        }
+        
+        .config-footer-note {
+            padding: 1.5rem;
+        }
+        
+        .config-footer-note p {
+            font-size: 1rem;
+        }
+    }
+</style>
+
+    </style>  
+</head>
+    </style>
+</head>
+<body>
+    <!-- Background Elements -->
+    <div class="grid-bg"></div>
+    <div class="scan-line"></div>
+
+    <!-- Header -->
+    <header>
+        <div class="logo">gDoF</div>
+        <nav>
+            <a href="#paradigma">PARADIGMA</a>
+            <a href="#arquitectura">SISTEMA</a>
+            <a href="#sistema">BLUEPRINT</a>
+            <a href="#manifiesto">MANIFIESTO</a>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1>
+                    Rediseñando el
+                    <span class="highlight">Sistema Operativo Humano</span>
+                    para la Era de la IA
+                </h1>
+                <p class="subtitle">
+              Guiar los Grados de Libertad para transformar la complejidad en acción exacta </p>
+              <p class="tagline">
+                    "Improvisar fué una virtud. Hoy es una debilidad."
+                </p>
+                <a href="#arquitectura" class="cta-button">CONOCER EL MODELO gDoF</a>
+            </div>
+            <div class="hero-visual">
+                <div class="rotating-diagram">
+                    <div class="axis-system">
+                        <div class="axis x"></div>
+                        <div class="axis y"></div>
+                        <div class="axis z"></div>
+                        <div class="coordinate-label x">X</div>
+                        <div class="coordinate-label y">Y</div>
+                        <div class="coordinate-label z">Z</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Paradigm Shift Section -->
+    <section id="paradigma" class="paradigm-shift">
+        <div class="section-header">
+            <div class="label">[ LA GRAN TRANSICIÓN ]</div>
+            <h2>El Fin del Humano como Ejecutor</h2>
+            <p>
+              La IA no vino a potenciar tu trabajo. Vino a dejar obsoleto tu sistema operativo mental.
+               La IA no desplaza al humano. Desplaza al humano indisciplinado.&nbsp; </p>
+        </div>
+
+        <div class="comparison-grid">
+            <div class="comparison-card">
+                <div class="icon">🧠</div>
+                <h3>Paradigma Obsoleto</h3>
+                <p><strong>Humano:</strong> Fuerza creativa y ejecutora<br>
+                <strong>Máquina:</strong> Herramienta pasiva<br>
+                <strong>Valor:</strong> Saber hacer, velocidad, esfuerzo<br>
+                <strong>Método:</strong> Improvisación, "ver qué sale"</p>
+                <ul>
+                    <li>El humano pensaba</li>
+                    <li>La máquina ejecutaba</li>
+                    <li>Improvisar fue una virtud</li>
+                </ul>
+            </div>
+
+            <div class="comparison-card">
+                <div class="icon">⚙️</div>
+                <h3>Nuevo Paradigma</h3>
+                <p><strong>Máquina:</strong> Motor creativo y ejecutor<br>
+                <strong>Humano:</strong> Gobernador, arquitecto del sistema<br>
+                <strong>Valor:</strong> Saber qué pedir, cuándo y bajo qué reglas<br>
+                <strong>Método:</strong> Diseño de protocolos, operación de escenarios</p>
+                <ul>
+                    <li>La máquina piensa y ejecuta</li>
+                    <li>El humano orquesta</li>
+                    <li>Improvisar es ahora una debilidad operativa</li>
+                </ul>
+            </div>
+        </div>
+		      <!-- SO Humano Comparison Infographic -->
+        <div class="so-comparison-section">
+            
+            <!-- Title & Introduction -->
+            <div class="so-comparison-header">
+                <h3>Sistema Operativo Humano: Clásico vs. Aumentado con IA</h3>
+                <p class="so-intro">
+                    El concepto "Sistema Operativo Humano" (SO.h) es una metáfora para entender 
+                    cómo procesamos información y actuamos. La llegada de la IA no nos reemplaza, 
+                    sino que actualiza nuestro "sistema" a una versión potenciada: el <strong>SO.h-IA</strong>, 
+                    donde el humano se convierte en director y la IA en amplificador.
+                </p>
+            </div>
+
+            <!-- Comparison Grid -->
+            <div class="so-comparison-grid">
+                
+                <!-- Left Column: SO.h Clásico -->
+                <div class="so-column so-classic">
+                    <div class="so-column-header">
+                        <h4>SO.h (Humano Clásico)</h4>
+                    </div>
+
+                    <!-- Item 1: Modo de Operación -->
+                    <div class="so-item">
+                        <div class="so-item-icon">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="so-item-content">
+                            <h5>Modo de Operación:</h5>
+                            <p class="so-item-title">Ejecutor Autónomo</p>
+                            <p class="so-item-desc">
+                                Nos basamos en nuestras capacidades individuales y atención limitada.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Item 2: Foco Principal -->
+                    <div class="so-item">
+                        <div class="so-item-icon">
+                            <i class="fas fa-tachometer-alt"></i>
+                        </div>
+                        <div class="so-item-content">
+                            <h5>Foco Principal:</h5>
+                            <p class="so-item-title">Velocidad + Dirección</p>
+                            <p class="so-item-desc">
+                                Intentamos hacer las tareas rápido y a la vez decidir el rumbo.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Item 3: Habilidad Clave -->
+                    <div class="so-item">
+                        <div class="so-item-icon">
+                            <i class="fas fa-lightbulb"></i>
+                        </div>
+                        <div class="so-item-content">
+                            <h5>Habilidad Clave:</h5>
+                            <p class="so-item-title">Pensamiento Crítico e Intuición</p>
+                            <p class="so-item-desc">
+                                La experiencia, el análisis y la intuición son nuestras herramientas principales.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Item 4: Balance -->
+                    <div class="so-item">
+                        <div class="so-item-icon">
+                            <i class="fas fa-balance-scale"></i>
+                        </div>
+                        <div class="so-item-content">
+                            <h5>Balance:</h5>
+                            <p class="so-item-title">Riesgo vs. Oportunidad</p>
+                            <div class="so-balance">
+                                <div class="balance-side risk-side">
+                                    <span class="balance-icon"><i class="fas fa-exclamation-triangle"></i></span>
+                                    <span class="balance-label">Sobrecarga y caos</span>
+                                </div>
+                                <div class="balance-center">⚖️</div>
+                                <div class="balance-side opportunity-side">
+                                    <span class="balance-icon"><i class="fas fa-user-check"></i></span>
+                                    <span class="balance-label">Autorrealización personal</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: SO.h-IA -->
+                <div class="so-column so-augmented">
+                    <div class="so-column-header">
+                        <h4>SO.h-IA (Humano + IA Permanente)</h4>
+                    </div>
+
+                    <!-- Item 1: Modo de Operación -->
+                    <div class="so-item">
+                        <div class="so-item-icon">
+                            <i class="fas fa-user-cog"></i>
+                        </div>
+                        <div class="so-item-content">
+                            <h5>Modo de Operación:</h5>
+                            <p class="so-item-title">Director y Orquestador</p>
+                            <p class="so-item-desc">
+                                Co-dirigimos sistemas inteligentes, delegando la ejecución mecánica.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Item 2: Foco Principal -->
+                    <div class="so-item">
+                        <div class="so-item-icon">
+                            <i class="fas fa-compass"></i>
+                        </div>
+                        <div class="so-item-content">
+                            <h5>Foco Principal:</h5>
+                            <p class="so-item-title">La IA domina la Velocidad, el Humano la Dirección</p>
+                            <p class="so-item-desc">
+                                Nos enfocamos en el propósito, el sentido y la estrategia.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Item 3: Habilidad Clave -->
+                    <div class="so-item">
+                        <div class="so-item-icon">
+                            <i class="fas fa-project-diagram"></i>
+                        </div>
+                        <div class="so-item-content">
+                            <h5>Habilidad Clave:</h5>
+                            <p class="so-item-title">Diseño de Interacción con IA</p>
+                            <p class="so-item-desc">
+                                Calibrar, supervisar, validar y dar "prompts" a la IA es crucial.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Item 4: Balance -->
+                    <div class="so-item">
+                        <div class="so-item-icon">
+                            <i class="fas fa-balance-scale"></i>
+                        </div>
+                        <div class="so-item-content">
+                            <h5>Balance:</h5>
+                            <p class="so-item-title">Riesgo vs. Oportunidad</p>
+                            <div class="so-balance">
+                                <div class="balance-side risk-side">
+                                    <span class="balance-icon"><i class="fas fa-robot"></i></span>
+                                    <span class="balance-label">Dependencia y deshumanización</span>
+                                </div>
+                                <div class="balance-center">⚖️</div>
+                                <div class="balance-side opportunity-side">
+                                    <span class="balance-icon"><i class="fas fa-rocket"></i></span>
+                                    <span class="balance-label">Evolución operativa</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+<!-- ============================================ -->
+<!-- FIN INFOGRAFÍA SO HUMANO -->
+<!-- ============================================ -->
+		<!-- Upgrade Mental Section -->
+            <div class="upgrade-mental-section">
+                <div class="upgrade-header">
+                    <h3>Tu Upgrade Mental: del SO.h al SO.h-IA</h3>
+                    <p>La transición no es automática. Requiere un protocolo de activación diario.</p>
+                </div>
+
+                <!-- Daily Boot Sequence -->
+                <div class="boot-sequence">
+                    <div class="boot-sequence-title">
+                        <span class="boot-label">[ SYSTEM BOOT: SO.h-IA // SESIÓN DIARIA ]</span>
+                        <h4>Secuencia&nbsp; de Arranque Diario: Activá tu Modo Director</h4>
+                    </div>
+
+                    <div class="boot-steps">
+                        
+                        <!-- Step 1 -->
+                        <div class="boot-step step-orange">
+                            <div class="step-number">1</div>
+                            <div class="step-icon">
+                                <i class="fas fa-compass"></i>
+                            </div>
+                            <div class="step-content">
+                                <h5>Chequeo del Núcleo:</h5>
+                                <p class="step-title">Conectá con tu propósito</p>
+                                <p class="step-desc">
+                                    Antes de comenzar tus tareas, definí la intención principal del día. 
+                                    Yo decido, la IA ejecuta.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Arrow -->
+                        <div class="boot-arrow">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+
+                        <!-- Step 2 -->
+                        <div class="boot-step step-purple">
+                            <div class="step-number">2</div>
+                            <div class="step-icon">
+                                <i class="fas fa-drafting-compass"></i>
+                            </div>
+                            <div class="step-content">
+                                <h5>Activación de Drivers:</h5>
+                                <p class="step-title">Modo Arquitecto</p>
+                                <p class="step-desc">
+                                    Desactivá el piloto automático de "hacer". Tu rol es diseñar 
+                                    los flujos, no poner los ladrillos.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Arrow -->
+                        <div class="boot-arrow">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+
+                        <!-- Step 3 -->
+                        <div class="boot-step step-blue">
+                            <div class="step-number">3</div>
+                            <div class="step-icon">
+                                <i class="fas fa-pause-circle"></i>
+                            </div>
+                            <div class="step-content">
+                                <h5>Calibración de Sensores:</h5>
+                                <p class="step-title">Pausa Forzada</p>
+                                <p class="step-desc">
+                                    Si sentís que vas muy rápido pero sin rumbo, frená. La dirección 
+                                    vale más que la velocidad.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Arrow -->
+                        <div class="boot-arrow">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+
+                        <!-- Step 4 -->
+                        <div class="boot-step step-gold">
+                            <div class="step-number">4</div>
+                            <div class="step-icon">
+                                <i class="fas fa-handshake"></i>
+                            </div>
+                            <div class="step-content">
+                                <h5>Interfaz Humana:</h5>
+                                <p class="step-title">El output debe ser humano</p>
+                                <p class="step-desc">
+                                    Asegurate de que tu trabajo, amplificado por IA, aporte valor 
+                                    real y calidez a otras personas.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Final Arrow -->
+                        <div class="boot-arrow">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+
+                        <!-- System Ready -->
+                        <div class="system-ready">
+                            <div class="ready-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="ready-content">
+                                <h5>SISTEMA</h5>
+                                <h4>LISTO</h4>
+                                <div class="ready-items">
+                                    <p>Ejecutar visión.</p>
+                                    <p>Orquestar recursos.</p>
+                                    <p>Mantener el control.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+<!-- ============================================ -->
+<!-- FIN SECCIÓN UPGRADE MENTAL -->
+<!-- ============================================ -->
+    </section>
+	
+<!-- Technical Specifications Section -->
+    <section class="tech-specs-section">
+        <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+            
+            <!-- Header -->
+          <div style="text-align: center; margin-bottom: 3rem;">
+            <div style="display: inline-block; font-family: 'Space Mono', monospace; font-size: 0.85rem; color: var(--accent-blue); border: 1px solid var(--accent-blue); padding: 0.4rem 1rem; margin-bottom: 1rem;">
+                    SPEC. DOC: 6DOF-FRAMEWORK-V2.0
+              </div>
+              <h2 style="font-family: 'Orbitron', sans-serif; font-size: 2rem; margin-bottom: 0.5rem; color: var(--text-light);">
+                Especificaciones del Framework gDoF
+            </h2>
+            </div>
+
+            <!-- Tabla de Especificaciones Técnicas -->
+            <div class="specs-table">
+                
+                <!-- Row 1: Paradigma -->
+                <div class="spec-row">
+                    <div class="spec-label">PARADIGMA</div>
+                    <div class="spec-content">
+                      El Agente Humano competitivo deja de ejecutar y pasa a guiar y gobernar sistemas inteligentes bajo gDoF.
+                  </div>
+                </div>
+
+                <!-- Row 2: Enfoque -->
+                <div class="spec-row">
+                    <div class="spec-label">ENFOQUE</div>
+                    <div class="spec-content">
+                        Operar por sistemas, reglas y coordinación inteligente. Priorizar dirección consciente sobre velocidad. Separar decisión de ejecución.
+                    </div>
+                </div>
+
+                <!-- Row 3: Marco Conceptual -->
+                <div class="spec-row">
+                    <div class="spec-label">MARCO<br>CONCEPTUAL</div>
+                    <div class="spec-content">
+                        <span class="spec-tag">Metacontrol</span>
+                        <span class="spec-tag">Orquestación</span>
+                        <span class="spec-tag">Sistema vs Caos</span>
+                        <span class="spec-tag">IA como Potencia, Humano como Criterio</span>
+                        <span class="spec-tag">gDoF – Guided Degrees of Freedom</span>
+                    </div>
+                </div>
+
+                <!-- Row 4: Modelo -->
+                <div class="spec-row highlighted">
+                    <div class="spec-label">MODELO</div>
+                    <div class="spec-content">
+                        <span class="spec-tag">Agente Humano = Controller</span>
+                        <span class="spec-tag">IA = Factory Operativa</span>
+                        <span class="spec-tag">Decisión separada de ejecución</span>
+                    </div>
+                </div>
+
+                <!-- Row 5: Sistema -->
+                <div class="spec-row">
+                    <div class="spec-label">SISTEMA</div>
+                    <div class="spec-content">
+                        <span class="spec-tag">Agente Humano + Agentes IA + Proceso coordinado + Reglas, límites y flujos</span>
+                    </div>
+                </div>
+
+                <!-- Row 6: Método -->
+                <div class="spec-row">
+                    <div class="spec-label">MÉTODO</div>
+                    <div class="spec-content">
+                        <span class="spec-tag"><strong>gDoF</strong> — Capa de dirección consciente. Define propósito, límites, prioridad y criterio.</span>
+                        <span class="spec-tag"><strong>9DoF</strong> — Orientación estable alineada a la realidad. Corrige deriva.</span>
+                        <span class="spec-tag"><strong>6DoF</strong> — Sistema de coordenadas para decidir, moverse y ejecutar con precisión.</span>
+                    </div>
+                </div>
+
+                <!-- Row 7: Proceso - Versión Vertical Enumerada -->
+<div class="spec-row">
+    <div class="spec-label">PROCESO</div>
+    <div class="spec-content">
+        <div class="process-vertical">
+            <div class="process-item">
+                <span class="process-num">①</span>
+                <span class="process-text">Definir marco</span>
+            </div>
+            <div class="process-item">
+                <span class="process-num">②</span>
+                <span class="process-text">Aplicar gDoF (criterio, intención, límites)</span>
+            </div>
+            <div class="process-item">
+                <span class="process-num">③</span>
+                <span class="process-text">Parametrizar variables</span>
+            </div>
+            <div class="process-item">
+                <span class="process-num">④</span>
+                <span class="process-text">Activar operación (6DoF)</span>
+            </div>
+            <div class="process-item">
+                <span class="process-num">⑤</span>
+                <span class="process-text">Mantener orientación estable (9DoF)</span>
+            </div>
+            <div class="process-item">
+                <span class="process-num">⑥</span>
+                <span class="process-text">Iterar y corregir</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+                <!-- Row 8: Herramientas -->
+                <div class="spec-row">
+                    <div class="spec-label">HERRAMIENTAS</div>
+                    <div class="spec-content">
+                        Hojas de trabajo • Agentes de IA • Protocolos • Implementaciones específicas • Matriz gDoF para guía y validación de decisión
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Frase de Cierre -->
+            <div style="margin-top: 3rem; padding: 2rem; background: rgba(255, 107, 53, 0.1); border-left: 4px solid var(--accent-orange); text-align: center;">
+                <p style="font-family: 'Orbitron', sans-serif; font-size: 1.2rem; color: var(--text-light); margin: 0; line-height: 1.6;">
+                    "gDoF convierte criterio humano e IA en una única máquina coherente de decisión y acción."
+                </p>
+            </div>
+
+        </div>
+		<!-- HTML del componente -->
+<div class="config-template">
+    <div class="config-template-title">CONFIGURACIÓN del SO.h-IA</div>
+    
+    <div class="config-item">
+        <div class="config-label">gDoF → PROPÓSITO</div>
+        <div class="config-placeholder">[Definir: criterios estratégicos, intención operativa, límites éticos, prioridades de decisión]</div>
+    </div>
+
+    <div class="config-item">
+        <div class="config-label">9DoF → ORIENTACIÓN</div>
+        <div class="config-placeholder">[Establecer: referencias externas, fuentes de validación, mecanismos de corrección de deriva]</div>
+    </div>
+
+    <div class="config-item">
+        <div class="config-label">6DoF → EJECUCIÓN</div>
+        <div class="config-placeholder">[Especificar: operaciones de IA Factory, flujos automatizados, capacidades de maniobra]</div>
+    </div>
+</div>
+
+<!-- Footer note -->
+<div class="config-footer-note">
+	<h2 style="font-family: 'Orbitron', sans-serif; font-size: 2rem; margin-bottom: 0.5rem; color: var(--text-light);">
+                KNOW HOW → KNOW GUIDE
+            </h2>
+    	<p>"Esta estructura de tres capas asegura que cada implementación&nbsp; tenga claridad en: qué decide el humano (PROPÓSITO), qué valida el sistema (ORIENTACIÓN), y qué ejecuta la IA (EJECUCIÓN)."</p>
+</div>
+
+</section>
+    
+    <!-- Architecture Section -->
+    <section id="arquitectura" class="architecture">
+        <div class="section-header">
+            <div class="label">[ EL SISTEMA HÍBRIDO ]</div>
+            <h2>El futuro no es Humano vs. IA<br>
+            Es Sistema vs. Caos</h2>
+            <p>
+                Mientras la IA aprende a parecer humana, el Agente Humano competitivo aprende a operar como un sistema.
+                Dejamos de "usar" la IA y empezamos a diseñar la arquitectura donde esta opera.
+            </p>
+        </div>
+
+        <div class="architecture-diagram">
+            <div class="role-card">
+                <h3>Guide</h3>
+                <p class="subtitle">[ Agente Humano ]</p>
+                <p>
+                    Define el marco, establece límites, prioriza, corrige el rumbo.
+                </p>
+                <p>
+                    <strong>Es criterio sin necesidad de fuerza bruta.</strong>
+                </p>
+                <p>
+                    Actúa como el cerebro y operador. Interpreta el contexto, define la intención 
+                    y fija las coordenadas. El criterio es indelegable.
+                </p>
+          </div>
+
+            <div class="role-card">
+                <h3>Agents</h3>
+                <p class="subtitle">[ Agentes IA ]</p>
+                <p>
+                    Procesan, generan, simulan, ejecutan, escalan.
+                </p>
+              <p>
+                    <strong>Es potencia sin criterio propio.</strong>
+                </p>
+                <p>
+                  Son los actuator + effector de la línea de producción. Ejecutan tareas específicas, 
+                    operan en paralelo y amplifican la capacidad sin agregar fricción al humano.
+              </p>
+          </div>
+        </div>
+    </section>
+
+        
+    </section>
+      <!-- End-to-End Flow Section -->
+    <section class="flow-diagram-section">
+        <div class="container" style="max-width: 1400px; margin: 0 auto; padding: 0 20px;">
+            
+            <!-- Header -->
+            <div style="text-align: center; margin-bottom: 4rem;">
+                <div style="display: inline-block; font-family: 'Space Mono', monospace; font-size: 0.85rem; color: var(--accent-orange); border: 1px solid var(--accent-orange); padding: 0.4rem 1rem; margin-bottom: 1rem;">
+                    PROTOCOLO 6DoF
+                </div>
+                <h2 style="font-family: 'Orbitron', sans-serif; font-size: 2.5rem; margin-bottom: 1rem; color: var(--text-light);">
+                    Flujo Operativo End-to-End
+                </h2>
+                <p style="color: var(--text-dim); max-width: 700px; margin: 0 auto;">
+                    Del caos a la precisión: así funciona el sistema híbrido humano-IA en cada ciclo.
+                </p>
+            </div>
+
+            <!-- Flow Diagram -->
+            <div class="flow-diagram">
+                
+                <!-- Step 1: INPUT -->
+                <div class="flow-box input-box">
+                    <div class="flow-label">INPUT</div>
+                    <div class="flow-content">
+                        <div class="flow-icon"><i class="fas fa-inbox"></i></div>
+                        <h4>Complejidad</h4>
+                        <p>Caos / Datos Crudos / Problema No Estructurado</p>
+                    </div>
+                </div>
+
+                <!-- Arrow 1 -->
+                <div class="flow-arrow">
+                    <div class="arrow-head">→</div>
+                </div>
+
+                <!-- Step 2: AGENTE HUMANO -->
+                <div class="flow-box human-box">
+                    <div class="flow-label">AGENTE HUMANO</div>
+                    <div class="flow-content">
+                        <div class="flow-icon"><i class="fas fa-user-cog"></i></div>
+                        <h4>Configuración gDoF</h4>
+                        <p>Decisión de Coordenadas (X, Y, Z, Roll, Pitch, Yaw)</p>
+                    </div>
+                </div>
+
+                <!-- Arrow 2 -->
+                <div class="flow-arrow">
+                    <div class="arrow-head">→</div>
+                </div>
+
+                <!-- Step 3: AGENTES IA -->
+                <div class="flow-box ai-box">
+                    <div class="flow-label">AGENTES IA</div>
+                    <div class="flow-content">
+                        <div class="flow-icon"><i class="fas fa-cogs"></i></div>
+                        <h4>Ejecución Agent</h4>
+                        <p>Prompt Estructurado / Procesamiento / Generación</p>
+                    </div>
+                </div>
+
+                <!-- Arrow 3 -->
+                <div class="flow-arrow">
+                    <div class="arrow-head">→</div>
+                </div>
+
+                <!-- Step 4: VALIDACIÓN -->
+                <div class="flow-box validation-box">
+                    <div class="flow-label">VALIDACIÓN</div>
+                    <div class="flow-content">
+                        <div class="flow-icon"><i class="fas fa-check-circle"></i></div>
+                        <h4>Docking Review</h4>
+                        <p>El Agente Humano verifica el output</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Decision Branch -->
+            <div class="decision-branch">
+                <div class="branch-container">
+                    
+                    <!-- Fallo Path -->
+                    <div class="branch-path fail-path">
+                        <div class="branch-label fail-label">
+                            <i class="fas fa-times-circle"></i> FALLA
+                        </div>
+                        <div class="branch-content">
+                            <div class="branch-icon-box">
+                                <div class="branch-main-icon fail-icon">
+                                    <i class="fas fa-redo-alt"></i>
+                                </div>
+                            </div>
+                            <h4 class="branch-title">Ajuste de Coordenadas</h4>
+                            <p class="branch-description">
+                                Se corrige el sistema de decisión
+                            </p>
+                            <div class="branch-action">
+                                <i class="fas fa-arrow-left"></i> Vuelve a Agentes IA
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Success Path -->
+                    <div class="branch-path success-path">
+                        <div class="branch-label success-label">
+                            <i class="fas fa-check-circle"></i> ACIERTO
+                        </div>
+                        <div class="branch-content">
+                            <div class="branch-icon-box">
+                                <div class="branch-main-icon success-icon">
+                                    <i class="fas fa-bullseye"></i>
+                                </div>
+                            </div>
+                            <h4 class="branch-title">Output de Impacto</h4>
+                            <p class="branch-description">
+                                Resultado preciso y escalable
+                            </p>
+                            <div class="branch-action">
+                                <i class="fas fa-check"></i> Sistema Validado
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+
+            <!-- Key Insight -->
+            <div style="margin-top: 4rem; padding: 2rem; background: rgba(79, 195, 247, 0.1); border-left: 4px solid var(--accent-blue); text-align: center;">
+                <p style="font-family: 'Orbitron', sans-serif; font-size: 1.1rem; color: var(--text-light); margin: 0;">
+                    <strong style="color: var(--accent-orange);">Ley Fundamental:</strong> 
+                    Corregir el resultado mejora un entregable. 
+                    <span style="color: var(--accent-blue);">Corregir la coordenada mejora el sistema.</span>
+                </p>
+            </div>
+
+        </div>
+    </section>
+<section id="audios" class="audio-library">
+    <div class="section-header">
+        <div class="label">[ BIBLIOTECA DE AUDIO ]</div>
+        <h2>Escuchá sobre&nbsp; gDoF en Acción</h2>
+        <p>
+          Exploraciones profundas del modelo gDoF. Cada audio desglosa conceptos clave, 
+            casos de uso y aplicaciones prácticas del Nuevo Sistema Operativo Humano.
+      </p>
+    </div>
+
+    <div class="audio-container">
+        <div class="audio-grid">
+            
+            <!-- Audio Destacado -->
+            <div class="audio-card featured">
+                <div class="featured-badge">NUEVO</div>
+                <div class="audio-header">
+                    <div class="audio-icon">1</div>
+                    <div class="audio-info">
+                        <h4>Introducción Completa al Sistema gDoF</h4>
+                        <div class="audio-meta">
+                            <span>10/12 15:30</span>
+                            <span>10 Dic 2025</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="audio-description">
+                    El recorrido definitivo por el nuevo paradigma humano-IA. Desde la obsolescencia 
+                    del sistema operativo mental hasta la implementación práctica de las 6 capas de control. 
+                    Ideal para comprender la filosofía completa del framework.
+                </p>
+                <div class="audio-player">
+                    <audio controls preload="metadata">
+                        <source src="file:///C|/Users/Gaston/Downloads/6DoF/audios/6dof-introduccion-completa.mp3" type="audio/mpeg">
+                        Tu navegador no soporta el elemento de audio.
+                    </audio>
+                </div>
+                <div class="audio-actions">
+                    <button class="audio-btn primary" onclick="downloadAudio('audios/6dof-introduccion-completa.mp3', '6DoF-Introduccion-Completa.mp3')">
+                        Podés Descargar MP3
+                    </button>
+                </div>
+                <span class="audio-tag">Fundamentos</span>
+            </div>
+
+            <!-- Audio Regular 1 -->
+            <div class="audio-card">
+                <div class="audio-header">
+                    <div class="audio-icon">2</div>
+                    <div class="audio-info">
+                        <h4>El Controller y el Factory</h4>
+                        <div class="audio-meta">
+                            <span>11/12 8:45</span>
+                            <span>11 Dic 2025</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="audio-description">
+                    Entendiendo los dos roles fundamentales del sistema híbrido. 
+                    CÃ³mo el humano pasa de ejecutor a gobernador y la IA se convierte en la factory.
+                </p>
+                <div class="audio-player">
+                    <audio controls preload="metadata">
+                        <source src="file:///C|/Users/Gaston/Downloads/6DoF/audios/6dof-arquitecto-motor.mp3" type="audio/mpeg">
+                        Tu navegador no soporta el elemento de audio.
+                    </audio>
+                </div>
+                <div class="audio-actions">
+                    <button class="audio-btn" onclick="downloadAudio('audios/6dof-arquitecto-motor.mp3', '6DoF-Arquitecto-Motor.mp3')">
+                        Podés Descargar MP3
+                    </button>
+                </div>
+                <span class="audio-tag">Conceptos</span>
+            </div>
+
+            <!-- Audio Regular 2 -->
+            <div class="audio-card">
+                <div class="audio-header">
+                    <div class="audio-icon">3</div>
+                    <div class="audio-info">
+                        <h4>Las 6 Capas en Detalle</h4>
+                        <div class="audio-meta">
+                            <span>12/12 12:20</span>
+                            <span>12 Dic 2024</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="audio-description">
+                    Desglose profundo de cada coordenada del sistema: Foco, Profundidad, Iteración, 
+                    Roll, Pitch y Yaw. Con ejemplos prácticos de aplicación.
+                </p>
+                <div class="audio-player">
+                    <audio controls preload="metadata">
+                        <source src="file:///C|/Users/Gaston/Downloads/6DoF/audios/6dof-6-capas-detalle.mp3" type="audio/mpeg">
+                        Tu navegador no soporta el elemento de audio.
+                    </audio>
+                </div>
+                <div class="audio-actions">
+                    <button class="audio-btn" onclick="downloadAudio('audios/6dof-6-capas-detalle.mp3', '6DoF-6-Capas-Detalle.mp3')">
+                        Podés Descargar MP3
+                    </button>
+                </div>
+                <span class="audio-tag">Técnico</span>
+            </div>
+
+            <!-- Audio Regular 3 -->
+            <div class="audio-card">
+                <div class="audio-header">
+                    <div class="audio-icon">4</div>
+                    <div class="audio-info">
+                        <h4>Del Caos a la Precisión</h4>
+                        <div class="audio-meta">
+                            <span>13/12 10:15</span>
+                            <span>13 Dic 2025</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="audio-description">
+                    El proceso operativo de 3 etapas: Libre (exploración), Precisión (alineación) 
+                    y Ejecución (impacto). Cómo transformar complejidad en acción exacta.
+                </p>
+                <div class="audio-player">
+                    <audio controls preload="metadata">
+                        <source src="file:///C|/Users/Gaston/Downloads/6DoF/audios/6dof-caos-precision.mp3" type="audio/mpeg">
+                        Tu navegador no soporta el elemento de audio.
+                    </audio>
+                </div>
+                <div class="audio-actions">
+                    <button class="audio-btn" onclick="downloadAudio('audios/6dof-caos-precision.mp3', '6DoF-Caos-Precision.mp3')">
+                        Podés Descargar MP3
+                    </button>
+                </div>
+                <span class="audio-tag">Proceso</span>
+            </div>
+
+            <!-- Audio Regular 4 -->
+            <div class="audio-card">
+                <div class="audio-header">
+                    <div class="audio-icon">5</div>
+                    <div class="audio-info">
+                        <h4>Casos de Uso Reales</h4>
+                        <div class="audio-meta">
+                            <span>14/12 14:00</span>
+                            <span>14 Dic 2025</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="audio-description">
+                    Aplicaciones concretas del modelo en marketing, finanzas, desarrollo de productos 
+                    y gestión de equipos. Desde informes complejos hasta estrategias de negocio.
+                </p>
+                <div class="audio-player">
+                    <audio controls preload="metadata">
+                        <source src="file:///C|/Users/Gaston/Downloads/6DoF/audios/6dof-casos-uso.mp3" type="audio/mpeg">
+                        Tu navegador no soporta el elemento de audio.
+                    </audio>
+                </div>
+                <div class="audio-actions">
+                    <button class="audio-btn" onclick="downloadAudio('audios/6dof-casos-uso.mp3', '6DoF-Casos-Uso.mp3')">
+                        Podés Descargar MP3
+                    </button>
+                </div>
+                <span class="audio-tag">Aplicación</span>
+            </div>
+
+        </div>
+    </div>
+</section>
+    <!-- 6DoF Layers Section -->
+    <section id="sistema" class="layers-section">
+        <div class="section-header">
+            <div class="label">[ EL BLUEPRINT ]</div>
+            <h2>Las 6 Capas de Control<br>del Nuevo SO.h-IA</br></h2>
+            <p>
+              Para gobernar el Factory, el Controller necesita un blueprint. Un método de coordenadas para 
+                decidir, moverse y ejecutar con precisión. Ese blueprint es 6DoF.
+          </p>
+			</div>
+
+ <!-- SUBTÍTULO: TRASLACIÓN -->
+        <div style="max-width: 1400px; margin: 0 auto 3rem; text-align: center;">
+            <div style="display: inline-block; padding: 1rem 3rem; background: rgba(19, 47, 76, 0.6); border: 2px solid var(--accent-orange); position: relative;">
+                <span style="position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px; background: linear-gradient(90deg, var(--accent-orange), var(--accent-amber)); opacity: 0.1; z-index: 0;"></span>
+                <h3 style="font-family: 'Orbitron', sans-serif; font-size: 1.8rem; color: var(--accent-orange); margin: 0; letter-spacing: 0.15em; position: relative; z-index: 1; font-weight: 900;">
+                    TRASLACIÓN - DONDE NOS MOVEMOS
+                </h3>
+            </div>
+        </div>
+
+        <!-- GRID DE LOS 3 EJES DE TRASLACIÓN -->
+        <div class="layers-grid">
+            <div class="layer-card" data-axis="EJE X">
+                <h4>Foco / Desafíos</h4>
+                <p class="description">
+                    Movimiento lateral. Define qué problema atacamos hoy.
+                    Qué desafíos principales y secundarios. Qué queda fuera del alcance.
+                </p>
+                <p class="example">
+                    Derecha: Recorte, decisión. | Izquierda: Exploración, apertura.
+                </p>
+            </div>
+
+            <div class="layer-card" data-axis="EJE Y">
+                <h4>Profundidad / Habilidades</h4>
+                <p class="description">
+                    Movimiento vertical. Define con qué capabilities (rol experto) resolvemos.
+                    El nivel técnico y profundidad requeridos.
+                </p>
+                <p class="example">
+                    Arriba: Forma, pieza final. | Abajo: Fundamento, concepto.
+                </p>
+            </div>
+
+            <div class="layer-card" data-axis="EJE Z">
+                <h4>Iteración / Tiempo</h4>
+                <p class="description">
+                    Movimiento longitudinal. Define el ritmo y el progreso cognitivo.
+                    Ritmo de avance, corrección, nivel de aceleración.
+                </p>
+                <p class="example">
+                    Adelante: Avanzar, concretar. | Nota: La aceleración estratégica solo debe ocurrir en el eje Z.
+                </p>
+            </div>
+        </div>
+
+        <!-- SUBTÍTULO: ROTACIÓN -->
+        <div style="max-width: 1400px; margin: 5rem auto 3rem; text-align: center;">
+            <div style="display: inline-block; padding: 1rem 3rem; background: rgba(19, 47, 76, 0.6); border: 2px solid var(--accent-blue); position: relative;">
+                <span style="position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px; background: linear-gradient(90deg, var(--accent-blue), var(--accent-amber)); opacity: 0.1; z-index: 0;"></span>
+                <h3 style="font-family: 'Orbitron', sans-serif; font-size: 1.8rem; color: var(--accent-blue); margin: 0; letter-spacing: 0.15em; position: relative; z-index: 1; font-weight: 900;">
+                    ROTACIÓN - CÓMO MIRAMOS
+                </h3>
+            </div>
+        </div>
+
+        <!-- GRID DE LOS 3 EJES DE ROTACIÓN -->
+        <div class="layers-grid">
+            <div class="layer-card" data-axis="ROLL">
+                <h4>Perspectiva / Enfoque</h4>
+                <p class="description">
+                    Rota el punto de vista sin cambiar el desafío. 
+                    Opciones: Estratégico, Creativo, Técnico, Comercial, Operativo.
+                </p>
+                <p class="example">
+                    Cambia cómo miramos el problema sin cambiar qué problema atacamos.
+                </p>
+            </div>
+
+            <div class="layer-card" data-axis="PITCH">
+                <h4>Nivel de Concreción</h4>
+                <p class="description">
+                    Regula el ángulo entre la idea abstracta y la acción tangible.
+                    Del concepto puro al output listo para usar.
+                </p>
+                <p class="example">
+                    Alto: Visión, metáfora. | Bajo: Acción concreta, output tangible.
+                </p>
+            </div>
+
+            <div class="layer-card" data-axis="YAW">
+                <h4>Intención</h4>
+                <p class="description">
+                    Define el 'para qué' del movimiento. El objetivo final.
+                    Opciones: Explorar, Convencer, Resolver, Ejecutar.
+                </p>
+                <p class="example">
+                    Determina la dirección y propósito de toda la operación.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Process Section -->
+    <section class="process-section">
+        <div class="section-header">
+            <div class="label">[ EL FLUJO OPERATIVO ]</div>
+            <h2>Del Movimiento Libre al Impacto Preciso</h2>
+            <p>
+                El Método 6DoF transforma la complejidad en tres etapas: exploración total, alineación 
+                y enfoque, ejecución de impacto máximo.
+            </p>
+        </div>
+
+        <div class="process-flow">
+            <div class="process-step" data-number="1">
+                <h4>LIBRE</h4>
+                <p class="description">Exploración Total</p>
+                <p>
+                    Todos los grados de libertad activos. Máximo desplazamiento para entender el sistema 
+                    completo, no solo el pedido inicial.
+                </p>
+                <p style="margin-top: 1.5rem; color: var(--accent-blue);">
+                    <strong>Objetivo:</strong> Detectar patrones y oportunidades
+                </p>
+            </div>
+
+            <div class="process-step" data-number="2">
+                <h4>PRECISIÓN</h4>
+                <p class="description">Alineación y Foco</p>
+                <p>
+                    Se reducen los grados de libertad. Se ordena, se elige una dirección (Yaw), 
+                    se fija un enfoque (Roll) y se estabilizan las coordenadas.
+                </p>
+                <p style="margin-top: 1.5rem; color: var(--accent-blue);">
+                    <strong>Objetivo:</strong> Dar forma sólida a lo valioso
+                </p>
+            </div>
+
+            <div class="process-step" data-number="3">
+                <h4>EJECUCIÓN</h4>
+                <p class="description">Impacto Máximo</p>
+                <p>
+                    Movimiento mínimo y preciso. Se ejecuta una acción concreta, sin ruido ni desvíos. 
+                    Acople perfecto con el objetivo.
+                </p>
+                <p style="margin-top: 1.5rem; color: var(--accent-blue);">
+                    <strong>Objetivo:</strong> Resolver algo específico, impactar en un punto claro
+                </p>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 5rem;">
+            <p style="font-size: 1.5rem; color: var(--accent-orange); font-family: 'Orbitron', sans-serif; font-weight: 700;">
+                "El valor no está en hacer más, sino en mover lo justo, en la dirección correcta"
+            </p>
+        </div>
+    </section>
+
+    <!-- Manifesto Section -->
+    <section id="manifiesto" class="manifesto">
+        <div class="manifesto-content">
+            <div class="section-header">
+                <div class="label">[ PRINCIPIOS FUNDAMENTALES ]</div>
+                <h2>Manifiesto gDoF: Las 10 Reglas del Nuevo Juego</h2>
+            </div>
+
+            <div class="manifesto-list">
+                <div class="manifesto-item">
+                    <div class="number">01</div>
+                    <p>La IA no viene a reemplazar humanos. Viene a reemplazar el caos humano.</p>
+                </div>
+
+                <div class="manifesto-item">
+                    <div class="number">02</div>
+                    <p>La improvisación dejó de ser talento. Hoy es una debilidad operativa.</p>
+                </div>
+
+                <div class="manifesto-item">
+                    <div class="number">03</div>
+                    <p>La IA ejecuta sin cansancio. El humano competitivo decide qué merece ser ejecutado.</p>
+                </div>
+
+                <div class="manifesto-item">
+                    <div class="number">04</div>
+                    <p>No gana el que hace más. Gana el que define mejor el sistema.</p>
+                </div>
+
+                <div class="manifesto-item">
+                    <div class="number">05</div>
+                    <p>La creatividad sin estructura es ruido amplificado por máquinas.</p>
+                </div>
+
+                <div class="manifesto-item">
+                    <div class="number">06</div>
+                    <p>El humano del futuro no compite en velocidad. Compite en dirección.</p>
+                </div>
+
+                <div class="manifesto-item">
+                    <div class="number">07</div>
+                    <p>Los protocolos no limitan la libertad. La hacen escalable.</p>
+                </div>
+
+                <div class="manifesto-item">
+                    <div class="number">08</div>
+                    <p>Si no gobernás sistemas inteligentes, vas a ser parte de uno.</p>
+                </div>
+
+                <div class="manifesto-item">
+                    <div class="number">09</div>
+                    <p>Robotizar al humano no es deshumanizarlo. Es devolverle el control.</p>
+                </div>
+
+                <div class="manifesto-item">
+                    <div class="number">10</div>
+                    <p>En la era de la IA, el poder no está en pensar más. Está en gobernar mejor.</p>
+                </div>
+            </div>
+
+            <div style="margin-top: 5rem;">
+                <a href="#" class="cta-button">IMPLEMENTAR Método gDoF&nbsp;</a>
+            </div>
+        </div>
+    </section>
+<!-- ============================================ -->
+<!-- SECCIÓN FAQ - INSERTAR DESPUÉS DEL MANIFIESTO -->
+<!-- Buscar línea aproximada 1550 (después de la sección manifesto) -->
+<!-- ============================================ -->
+
+    <!-- FAQ Section -->
+    <section class="faq-section">
+        <div class="container" style="max-width: 1000px; margin: 0 auto; padding: 0 20px;">
+            
+          <div class="section-header">
+            <div class="label">[ PREGUNTAS FRECUENTES ]</div>
+                <h2>Aclaraciones sobre gDoF</h2>
+              <p>
+                Respuestas concretas a las dudas más comunes sobre la implementación y uso del Método 6DoF.
+            </p>
+            </div>
+
+            <div class="faq-container">
+                
+                <!-- FAQ 1 -->
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFAQ(this)">
+                        <span class="faq-number">01</span>
+                        <span class="faq-text">¿Por dónde empiezo si nunca trabajé con sistemas estructurados?</span>
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>
+                            Empezá con una sola coordenada: <strong>Foco (Eje X)</strong>. Antes de pedirle algo a la IA, 
+                            escribí en una frase qué problema atacás y qué queda fuera. Solo eso. Una vez que ese hábito 
+                            se vuelve automático, sumá <strong>Intención (Yaw)</strong>: ¿explorás, convencés o ejecutás? 
+                            No intentes aplicar las 6 capas de entrada. El sistema se construye por capas, literalmente.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- FAQ 2 -->
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFAQ(this)">
+                        <span class="faq-number">02</span>
+                        <span class="faq-text">¿Cuánto tiempo toma realmente internalizar este sistema operativo?</span>
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>
+                            La primera vez que lo usás conscientemente: 15-20 minutos por tarea. Después de 10-15 sesiones: 
+                            3-5 minutos. Después de un mes de uso diario: es instantáneo e invisible, como manejar un auto. 
+                            El punto de inflexión ocurre cuando dejás de "pensar en 6DoF" y simplemente <strong>pensás en 6DoF</strong>. 
+                            Es un sistema operativo, no una checklist.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- FAQ 3 -->
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFAQ(this)">
+                        <span class="faq-number">03</span>
+                        <span class="faq-text">¿Hay situaciones donde NO debería usar gDoF?</span>
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>
+                            Sí. No lo uses para tareas <strong>triviales y repetitivas</strong> donde ya tenés un template 
+                            funcionando (emails de rutina, reportes automáticos). No lo uses en <strong>brainstorming puro</strong> 
+                            donde querés caos creativo sin restricciones. No lo uses si estás <strong>apagando un incendio</strong> 
+                            y necesitás velocidad bruta, no dirección. 6DoF es para complejidad que requiere criterio, 
+                            no para tareas que requieren solo volumen o urgencia.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- FAQ 4 -->
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFAQ(this)">
+                        <span class="faq-number">04</span>
+                        <span class="faq-text">¿Qué diferencia hay entre 6DoF y usar "buenos prompts"?</span>
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>
+                            Un buen prompt es una orden bien formulada. 6DoF es el <strong>sistema de pensamiento</strong> 
+                            que te permite formular esa orden. La diferencia: un prompt efectivo te da un buen resultado <em>una vez</em>. 
+                            6DoF te da un <strong>protocolo replicable</strong> que funciona en cualquier contexto. No competís 
+                            con "prompt engineers", operás en una capa superior: diseñás el sistema que genera los prompts correctos.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- FAQ 5 -->
+                <div class="faq-item">
+                    <button class="faq-question" onclick="toggleFAQ(this)">
+                        <span class="faq-number">05</span>
+                        <span class="faq-text">¿Funciona solo con IA o puedo aplicarlo a equipos humanos?</span>
+                        <span class="faq-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>
+                            Funciona con <strong>cualquier sistema que ejecute bajo instrucciones</strong>: IAs, equipos, 
+                            proveedores externos, procesos automatizados. La diferencia es que la IA no te cuestiona las coordenadas, 
+                            solo las ejecuta. Un equipo humano puede (y debe) desafiar el marco. Pero el framework sigue siendo 
+                            el mismo: vos definís el sistema de coordenadas, ellos operan dentro de él. 6DoF no es una herramienta 
+                            para IA, es un <strong>lenguaje de control para sistemas complejos</strong>.
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+<!-- ============================================ -->
+<!-- FIN SECCIÓN FAQ -->
+<!-- ============================================ -->
+
+
+<!-- ============================================ -->
+<!-- ESTILOS CSS - AGREGAR EN <style> ANTES DE </style> -->
+<!-- ============================================ -->
+
+<style>
+/* FAQ Section */
+.faq-section {
+    background: linear-gradient(180deg, var(--primary-dark), var(--secondary-dark));
+    padding: 8rem 5%;
+    position: relative;
+}
+
+.faq-container {
+    margin-top: 4rem;
+}
+
+.faq-item {
+    background: rgba(19, 47, 76, 0.4);
+    border: 2px solid var(--grid-color);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    transition: all 0.3s;
+}
+
+.faq-item:hover {
+    border-color: var(--accent-blue);
+}
+
+.faq-item.active {
+    border-color: var(--accent-orange);
+    background: rgba(19, 47, 76, 0.6);
+}
+
+.faq-question {
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.faq-question:hover {
+    background: rgba(79, 195, 247, 0.05);
+}
+
+.faq-number {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--accent-orange);
+    min-width: 3rem;
+    flex-shrink: 0;
+}
+
+.faq-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.2rem;
+    color: var(--text-light);
+    flex: 1;
+    line-height: 1.4;
+}
+
+.faq-icon {
+    font-size: 2rem;
+    color: var(--accent-blue);
+    font-weight: 300;
+    min-width: 2rem;
+    text-align: center;
+    transition: transform 0.3s;
+    flex-shrink: 0;
+}
+
+.faq-item.active .faq-icon {
+    transform: rotate(45deg);
+    color: var(--accent-orange);
+}
+
+.faq-answer {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease-out, padding 0.4s ease-out;
+    padding: 0 2rem;
+}
+
+.faq-item.active .faq-answer {
+    max-height: 500px;
+    padding: 0 2rem 2rem 6.5rem;
+}
+
+.faq-answer p {
+    color: var(--text-dim);
+    line-height: 1.8;
+    font-size: 1rem;
+}
+
+.faq-answer strong {
+    color: var(--accent-blue);
+}
+
+.faq-answer em {
+    color: var(--accent-orange);
+    font-style: normal;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .faq-question {
+        padding: 1.5rem;
+        gap: 1rem;
+    }
+    
+    .faq-number {
+        font-size: 1rem;
+        min-width: 2rem;
+    }
+    
+    .faq-text {
+        font-size: 1rem;
+    }
+    
+    .faq-item.active .faq-answer {
+        padding: 0 1.5rem 1.5rem 1.5rem;
+    }
+}
+</style>
+
+
+<!-- ============================================ -->
+<!-- JAVASCRIPT - AGREGAR ANTES DE </body> -->
+<!-- ============================================ -->
+
+<script>
+function toggleFAQ(button) {
+    const faqItem = button.parentElement;
+    const isActive = faqItem.classList.contains('active');
+    
+    // Cerrar todos los otros items
+    document.querySelectorAll('.faq-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    // Toggle el item actual
+    if (!isActive) {
+        faqItem.classList.add('active');
+    }
+}
+</script>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-logo">gDoF</div>
+        <p>Nuevo Sistema Operativo Humano para la Era de la IA</p>
+        <p style="color: var(--accent-blue); margin-top: 2rem;">
+            "La IA ejecuta. El humano gobierna. Eso es 6DoF."
+        </p>
+        <div class="social-links">
+            <a href="#">LinkedIn</a>
+            <a href="#">Twitter</a>
+            <a href="#">GitHub</a>
+        </div>
+        <p style="margin-top: 3rem; font-size: 0.9rem;">
+            © 2024 6DoF Framework. Rediseñando el trabajo para la nueva era.
+        </p>
+    </footer>
+
+    <script>
+        // Smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Intersection Observer for fade-in animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observe all cards and sections
+        document.querySelectorAll('.comparison-card, .role-card, .layer-card, .process-step, .manifesto-item').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(30px)';
+            el.style.transition = 'all 0.6s ease-out';
+            observer.observe(el);
+        });
+    </script>
+	<script>
+// FunciÃ³n para descargar audios
+function downloadAudio(audioUrl, fileName) {
+    // Crear un elemento 'a' temporal
+    const link = document.createElement('a');
+    link.href = audioUrl;
+    link.download = fileName;
+    
+    // Simular click para iniciar descarga
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Feedback visual (opcional)
+    console.log(`Descargando: ${fileName}`);
+}
+
+// Prevenir que el audio se pause cuando se hace hover
+document.querySelectorAll('.audio-card').forEach(card => {
+    const audio = card.querySelector('audio');
+    if (audio) {
+        card.addEventListener('mouseenter', () => {
+            // Mantener el estado del audio
+        });
+    }
+});
+</script>
+<script>                         ← NUEVA LÍNEA (script FAQ)
+function toggleFAQ(button) {
+    ...
+}
+</script>                
+</body>
+</html>
