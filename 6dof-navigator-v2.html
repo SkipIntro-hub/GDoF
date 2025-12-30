@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6DoF Prompt Navigator - Docking Simulator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@400;700&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        :root {
+            --primary-dark: #0a1929;
+            --secondary-dark: #132f4c;
+            --accent-orange: #ff6b35;
+            --accent-amber: #f7931e;
+            --accent-blue: #4fc3f7;
+            --text-light: #e0e7ff;
+            --text-dim: #8b9dc3;
+            --grid-color: rgba(79, 195, 247, 0.1);
+            --glow: rgba(255, 107, 53, 0.4);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--primary-dark);
+            color: var(--text-light);
+            overflow: hidden;
+        }
+        
+        /* Technical Grid Background */
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.3;
+        }
+        
+        .scan-line {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
+            box-shadow: 0 0 20px var(--accent-blue);
+            animation: scan 8s linear infinite;
+            z-index: 1;
+            opacity: 0.3;
+        }
+        
+        @keyframes scan {
+            from { transform: translateY(0); }
+            to { transform: translateY(100vh); }
+        }
+        
+        #root {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        .container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            position: relative;
+        }
+        
+        /* 3D Canvas - AHORA CON MAYOR Z-INDEX */
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            pointer-events: none;
+        }
+        
+        /* Panels */
+        .panel {
+            position: relative;
+            z-index: 10;
+            background: rgba(10, 25, 41, 0.85);
+            backdrop-filter: blur(10px);
+            border: 2px solid var(--grid-color);
+            padding: 20px;
+            width: 320px;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        .panel-left {
+            border-right: none;
+        }
+        
+        .panel-right {
+            border-left: none;
+            margin-left: auto;
+        }
+        
+        .panel h2 {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--accent-orange);
+            border-bottom: 2px solid var(--accent-orange);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        
+        /* Axis Control */
+        .axis-control {
+            margin-bottom: 30px;
+        }
+        
+        .axis-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        
+        .axis-name {
+            font-family: 'Space Mono', monospace;
+            color: var(--accent-amber);
+            font-weight: bold;
+        }
+        
+        .axis-value {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--accent-blue);
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .axis-slider {
+            width: 100%;
+            height: 30px;
+            background: rgba(19, 47, 76, 0.5);
+            border: 1px solid var(--grid-color);
+            position: relative;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        
+        .axis-slider:hover {
+            border-color: var(--accent-blue);
+        }
+        
+        .axis-track {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--accent-blue);
+            transform: translateY(-50%);
+            opacity: 0.5;
+        }
+        
+        .axis-marker {
+            position: absolute;
+            top: 50%;
+            width: 16px;
+            height: 16px;
+            background: var(--accent-orange);
+            border: 2px solid var(--accent-amber);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            cursor: grab;
+            box-shadow: 0 0 15px var(--glow);
+            transition: all 0.2s;
+        }
+        
+        .axis-marker:hover {
+            transform: translate(-50%, -50%) scale(1.2);
+            box-shadow: 0 0 25px var(--glow);
+        }
+        
+        .axis-marker:active {
+            cursor: grabbing;
+        }
+        
+        .axis-limits {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--text-dim);
+            margin-top: 5px;
+            font-family: 'Space Mono', monospace;
+        }
+        
+        .axis-description {
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-top: 5px;
+            line-height: 1.4;
+        }
+        
+        /* HUD Central - MENOR Z-INDEX PARA NO OCLUIR */
+        .hud {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 3;
+            background: rgba(10, 25, 41, 0.9);
+            backdrop-filter: blur(15px);
+            border: 2px solid var(--accent-blue);
+            padding: 20px;
+            min-width: 500px;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(79, 195, 247, 0.3);
+        }
+        
+        .hud-title {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--accent-blue);
+            font-size: 20px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-weight: 900;
+        }
+        
+        .hud-status {
+            font-family: 'Space Mono', monospace;
+            font-size: 16px;
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid var(--grid-color);
+            background: rgba(19, 47, 76, 0.5);
+        }
+        
+        .status-approaching { color: var(--accent-amber); }
+        .status-aligned { color: var(--accent-blue); }
+        .status-docked { 
+            color: var(--accent-orange); 
+            animation: pulse 1s infinite;
+            border-color: var(--accent-orange);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.02); }
+        }
+        
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .telemetry-item {
+            background: rgba(19, 47, 76, 0.5);
+            border: 1px solid var(--grid-color);
+            padding: 8px;
+            text-align: left;
+            transition: all 0.3s;
+        }
+        
+        .telemetry-item:hover {
+            border-color: var(--accent-blue);
+            background: rgba(19, 47, 76, 0.7);
+        }
+        
+        .telem-label {
+            font-family: 'Space Mono', monospace;
+            color: var(--text-dim);
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+        
+        .telem-value {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--accent-blue);
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .telem-target {
+            color: var(--text-dim);
+            font-size: 10px;
+            margin-top: 3px;
+        }
+        
+        .telem-delta {
+            font-size: 11px;
+            margin-top: 3px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .delta-positive { color: var(--accent-orange); }
+        .delta-negative { color: var(--accent-orange); }
+        .delta-aligned { color: var(--accent-blue); }
+        
+        .distance-display {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(19, 47, 76, 0.5);
+            border: 1px solid var(--accent-blue);
+        }
+        
+        .distance-label {
+            font-family: 'Space Mono', monospace;
+            color: var(--text-dim);
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        
+        .distance-value {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--accent-blue);
+            font-size: 28px;
+            font-weight: bold;
+            text-shadow: 0 0 20px var(--accent-blue);
+        }
+        
+        /* Navigation Card */
+        .nav-card {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 50;
+            background: rgba(10, 25, 41, 0.98);
+            backdrop-filter: blur(20px);
+            border: 3px solid var(--accent-orange);
+            padding: 30px;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 0 60px var(--glow);
+        }
+        
+        .nav-card h2 {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--accent-orange);
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .nav-card-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(19, 47, 76, 0.5);
+            border: 1px solid var(--grid-color);
+        }
+        
+        .nav-card-section h3 {
+            font-family: 'Space Mono', monospace;
+            color: var(--accent-amber);
+            margin-bottom: 10px;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+        
+        .nav-card-section p {
+            color: var(--text-light);
+            line-height: 1.7;
+            font-size: 13px;
+        }
+        
+        .nav-card-section strong {
+            color: var(--accent-blue);
+        }
+        
+        .prompt-box {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid var(--accent-blue);
+            padding: 15px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-size: 12px;
+            line-height: 1.7;
+            color: var(--text-light);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .nav-card-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        
+        .btn {
+            font-family: 'Orbitron', sans-serif;
+            background: rgba(19, 47, 76, 0.8);
+            color: var(--text-light);
+            border: 2px solid var(--accent-blue);
+            padding: 12px 24px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn:hover {
+            background: var(--accent-blue);
+            color: var(--primary-dark);
+            box-shadow: 0 0 20px var(--accent-blue);
+            transform: translateY(-2px);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-amber));
+            border-color: var(--accent-orange);
+            color: var(--primary-dark);
+        }
+        
+        .btn-primary:hover {
+            box-shadow: 0 0 30px var(--glow);
+            transform: translateY(-2px) scale(1.05);
+        }
+        
+        /* Keyboard Hints */
+        .keyboard-hints {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            background: rgba(10, 25, 41, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--grid-color);
+            padding: 10px 20px;
+            font-size: 11px;
+            color: var(--text-dim);
+            font-family: 'Space Mono', monospace;
+        }
+        
+        .keyboard-hints strong {
+            color: var(--accent-orange);
+        }
+        
+        /* Preset Selector */
+        .preset-selector {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(19, 47, 76, 0.5);
+            border: 1px solid var(--grid-color);
+        }
+        
+        .preset-selector label {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 8px;
+        }
+        
+        .preset-selector select {
+            width: 100%;
+            background: rgba(10, 25, 41, 0.8);
+            color: var(--text-light);
+            border: 1px solid var(--accent-blue);
+            padding: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .preset-selector select:hover {
+            border-color: var(--accent-orange);
+            box-shadow: 0 0 10px rgba(79, 195, 247, 0.3);
+        }
+        
+        .preset-selector option {
+            background: var(--primary-dark);
+            color: var(--text-light);
+        }
+        
+        /* Scrollbar customization */
+        .panel::-webkit-scrollbar,
+        .nav-card::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .panel::-webkit-scrollbar-track,
+        .nav-card::-webkit-scrollbar-track {
+            background: rgba(19, 47, 76, 0.5);
+        }
+        
+        .panel::-webkit-scrollbar-thumb,
+        .nav-card::-webkit-scrollbar-thumb {
+            background: var(--accent-blue);
+            border-radius: 4px;
+        }
+        
+        .panel::-webkit-scrollbar-thumb:hover,
+        .nav-card::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-orange);
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+    <div class="scan-line"></div>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback } = React;
+        
+        // Presets de navegación
+        const PRESETS = {
+            neutral: {
+                name: "Neutral - Punto de inicio",
+                coords: { X: 0, Y: 0, Z: 0, Roll: 0, Pitch: 0, Yaw: 0 }
+            },
+            creative: {
+                name: "Creative Exploration",
+                coords: { X: -8, Y: 3, Z: 7, Roll: -45, Pitch: 30, Yaw: 0 }
+            },
+            strategic: {
+                name: "Strategic Analysis",
+                coords: { X: -5, Y: -6, Z: 4, Roll: 45, Pitch: 60, Yaw: 90 }
+            },
+            production: {
+                name: "Content Production",
+                coords: { X: 6, Y: 8, Z: 9, Roll: 0, Pitch: -70, Yaw: 270 }
+            },
+            pitch: {
+                name: "Pitch Development",
+                coords: { X: 2, Y: 4, Z: 6, Roll: -90, Pitch: -20, Yaw: 180 }
+            },
+            diagnosis: {
+                name: "Problem Diagnosis",
+                coords: { X: -7, Y: -8, Z: 5, Roll: 90, Pitch: 70, Yaw: 90 }
+            },
+            prototype: {
+                name: "Rapid Prototyping",
+                coords: { X: 4, Y: 7, Z: 10, Roll: -135, Pitch: -40, Yaw: 270 }
+            }
+        };
+        
+        // Descripciones de ejes
+        const AXIS_INFO = {
+            X: {
+                name: "EJE X - FOCO",
+                leftLabel: "Apertura",
+                rightLabel: "Recorte",
+                getDescription: (val) => {
+                    if (val < -5) return "Alta apertura - Exploración divergente";
+                    if (val < -2) return "Apertura moderada - Exploración controlada";
+                    if (val <= 2) return "Equilibrio - Problema definido y flexible";
+                    if (val <= 5) return "Recorte moderado - Enfoque específico";
+                    return "Alto recorte - Máxima especificidad";
+                }
+            },
+            Y: {
+                name: "EJE Y - PROFUNDIDAD",
+                leftLabel: "Fundamento",
+                rightLabel: "Ejecución",
+                getDescription: (val) => {
+                    if (val < -5) return "Filosófico - Primeros principios";
+                    if (val < -2) return "Estratégico - Conceptos y frameworks";
+                    if (val <= 2) return "Arquitectura - Diseño de sistemas";
+                    if (val <= 5) return "Táctico - Implementación práctica";
+                    return "Operativo - Producción de outputs";
+                }
+            },
+            Z: {
+                name: "EJE Z - ITERACIÓN",
+                leftLabel: "Slow",
+                rightLabel: "Fast",
+                getDescription: (val) => {
+                    if (val < -5) return "Ciclos largos - Alta deliberación";
+                    if (val < -2) return "Ritmo moderado - Balance reflexión/acción";
+                    if (val <= 2) return "Ritmo normal - Progreso constante";
+                    if (val <= 5) return "Ciclos cortos - Experimentación activa";
+                    return "Máxima velocidad - Aprendizaje exponencial";
+                }
+            },
+            Roll: {
+                name: "ROLL - PERSPECTIVA",
+                leftLabel: "Creativo",
+                rightLabel: "Técnico",
+                getDescription: (deg) => {
+                    const normalized = ((deg % 360) + 360) % 360;
+                    if (normalized < 45) return "Neutro - Enfoque balanceado";
+                    if (normalized < 90) return "Técnico - Engineering-first";
+                    if (normalized < 135) return "Analítico - Data-driven";
+                    if (normalized < 180) return "Sistémico - Visión holística";
+                    if (normalized < 225) return "Inverso - Pensamiento contrarian";
+                    if (normalized < 270) return "Humano - User-centered";
+                    if (normalized < 315) return "Comercial - Business value";
+                    return "Creativo - Design thinking";
+                }
+            },
+            Pitch: {
+                name: "PITCH - CONCRECIÓN",
+                leftLabel: "Acción",
+                rightLabel: "Visión",
+                getDescription: (deg) => {
+                    if (deg < -60) return "Output directo - Producción táctica";
+                    if (deg < -30) return "Implementación - Ejecución práctica";
+                    if (deg <= 30) return "Balance - Arquitectura y diseño";
+                    if (deg <= 60) return "Estrategia - Frameworks conceptuales";
+                    return "Visión - Alto nivel estratégico";
+                }
+            },
+            Yaw: {
+                name: "YAW - INTENCIÓN",
+                leftLabel: "Explorar",
+                rightLabel: "Ejecutar",
+                getDescription: (deg) => {
+                    const normalized = ((deg % 360) + 360) % 360;
+                    if (normalized < 45 || normalized >= 315) return "Explorar - Generar opciones";
+                    if (normalized < 135) return "Resolver - Encontrar solución";
+                    if (normalized < 225) return "Convencer - Argumentar persuasivamente";
+                    return "Ejecutar - Producir deliverable";
+                }
+            }
+        };
+        
+        // Three.js Scene Component
+        function ThreeScene({ coordinates }) {
+            const canvasRef = useRef(null);
+            const sceneRef = useRef(null);
+            const rendererRef = useRef(null);
+            const cameraRef = useRef(null);
+            const targetRef = useRef(null);
+            const particlesRef = useRef(null);
+            const ringsRef = useRef([]);
+            
+            useEffect(() => {
+                if (!canvasRef.current) return;
+                
+                // Setup scene
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x0a1929);
+                sceneRef.current = scene;
+                
+                // Camera
+                const camera = new THREE.PerspectiveCamera(
+                    75,
+                    window.innerWidth / window.innerHeight,
+                    0.1,
+                    1000
+                );
+                camera.position.z = 50;
+                cameraRef.current = camera;
+                
+                // Renderer
+                const renderer = new THREE.WebGLRenderer({ 
+                    canvas: canvasRef.current,
+                    antialias: true,
+                    alpha: true
+                });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                rendererRef.current = renderer;
+                
+                // Lights
+                const ambientLight = new THREE.AmbientLight(0x4fc3f7, 0.3);
+                scene.add(ambientLight);
+                
+                const pointLight = new THREE.PointLight(0xff6b35, 1.5, 100);
+                pointLight.position.set(0, 0, 20);
+                scene.add(pointLight);
+                
+                const backLight = new THREE.PointLight(0xf7931e, 1, 100);
+                backLight.position.set(0, 0, -20);
+                scene.add(backLight);
+                
+                // Target Sphere (Problem Space)
+                const targetGeometry = new THREE.SphereGeometry(5, 32, 32);
+                const targetMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x4fc3f7,
+                    transparent: true,
+                    opacity: 0.4,
+                    wireframe: true,
+                    emissive: 0x4fc3f7,
+                    emissiveIntensity: 0.2
+                });
+                const target = new THREE.Mesh(targetGeometry, targetMaterial);
+                scene.add(target);
+                targetRef.current = target;
+                
+                // Orbital rings around target
+                for (let i = 0; i < 3; i++) {
+                    const ringGeometry = new THREE.TorusGeometry(8 + i * 2, 0.1, 16, 100);
+                    const ringMaterial = new THREE.MeshBasicMaterial({
+                        color: i === 0 ? 0xff6b35 : i === 1 ? 0xf7931e : 0x4fc3f7,
+                        transparent: true,
+                        opacity: 0.3
+                    });
+                    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                    ring.rotation.x = Math.PI / 2 + (i * 0.3);
+                    ring.rotation.y = i * 0.5;
+                    scene.add(ring);
+                    ringsRef.current.push(ring);
+                }
+                
+                // Coordinate axes
+                const axesHelper = new THREE.AxesHelper(25);
+                scene.add(axesHelper);
+                
+                // Particle cloud
+                const particlesGeometry = new THREE.BufferGeometry();
+                const particlesCount = 1500;
+                const positions = new Float32Array(particlesCount * 3);
+                const colors = new Float32Array(particlesCount * 3);
+                
+                for (let i = 0; i < particlesCount; i++) {
+                    positions[i * 3] = (Math.random() - 0.5) * 100;
+                    positions[i * 3 + 1] = (Math.random() - 0.5) * 100;
+                    positions[i * 3 + 2] = (Math.random() - 0.5) * 100;
+                    
+                    // Random colors between orange and blue
+                    const colorChoice = Math.random();
+                    if (colorChoice < 0.33) {
+                        colors[i * 3] = 1.0;     // R
+                        colors[i * 3 + 1] = 0.42; // G
+                        colors[i * 3 + 2] = 0.21; // B (orange)
+                    } else if (colorChoice < 0.66) {
+                        colors[i * 3] = 0.97;    // R
+                        colors[i * 3 + 1] = 0.58; // G
+                        colors[i * 3 + 2] = 0.12; // B (amber)
+                    } else {
+                        colors[i * 3] = 0.31;    // R
+                        colors[i * 3 + 1] = 0.76; // G
+                        colors[i * 3 + 2] = 0.97; // B (blue)
+                    }
+                }
+                
+                particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                
+                const particlesMaterial = new THREE.PointsMaterial({
+                    size: 0.8,
+                    transparent: true,
+                    opacity: 0.6,
+                    vertexColors: true
+                });
+                
+                const particles = new THREE.Points(particlesGeometry, particlesMaterial);
+                scene.add(particles);
+                particlesRef.current = particles;
+                
+                // Animation loop
+                function animate() {
+                    requestAnimationFrame(animate);
+                    
+                    if (targetRef.current) {
+                        targetRef.current.rotation.y += 0.005;
+                        targetRef.current.rotation.x += 0.002;
+                    }
+                    
+                    ringsRef.current.forEach((ring, index) => {
+                        ring.rotation.z += 0.001 * (index + 1);
+                    });
+                    
+                    if (particlesRef.current) {
+                        particlesRef.current.rotation.y += 0.0005;
+                    }
+                    
+                    renderer.render(scene, camera);
+                }
+                animate();
+                
+                // Handle resize
+                const handleResize = () => {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                };
+                window.addEventListener('resize', handleResize);
+                
+                return () => {
+                    window.removeEventListener('resize', handleResize);
+                    renderer.dispose();
+                };
+            }, []);
+            
+            // Update scene based on coordinates
+            useEffect(() => {
+                if (!sceneRef.current || !targetRef.current) return;
+                
+                // Calculate distance to target
+                const distance = Math.sqrt(
+                    Math.pow(coordinates.X / 10, 2) +
+                    Math.pow(coordinates.Y / 10, 2) +
+                    Math.pow(coordinates.Z / 10, 2) +
+                    Math.pow(coordinates.Roll / 180, 2) +
+                    Math.pow(coordinates.Pitch / 180, 2) +
+                    Math.pow(coordinates.Yaw / 180, 2)
+                );
+                
+                // Update target color and effects based on proximity
+                if (distance < 0.5) {
+                    targetRef.current.material.color.setHex(0xff6b35);
+                    targetRef.current.material.emissive.setHex(0xff6b35);
+                    targetRef.current.material.opacity = 0.7;
+                    targetRef.current.material.emissiveIntensity = 0.5;
+                } else if (distance < 2) {
+                    targetRef.current.material.color.setHex(0x4fc3f7);
+                    targetRef.current.material.emissive.setHex(0x4fc3f7);
+                    targetRef.current.material.opacity = 0.6;
+                    targetRef.current.material.emissiveIntensity = 0.3;
+                } else if (distance < 5) {
+                    targetRef.current.material.color.setHex(0xf7931e);
+                    targetRef.current.material.emissive.setHex(0xf7931e);
+                    targetRef.current.material.opacity = 0.5;
+                    targetRef.current.material.emissiveIntensity = 0.2;
+                } else {
+                    targetRef.current.material.color.setHex(0x8b9dc3);
+                    targetRef.current.material.emissive.setHex(0x8b9dc3);
+                    targetRef.current.material.opacity = 0.3;
+                    targetRef.current.material.emissiveIntensity = 0.1;
+                }
+                
+                // Update camera position based on coordinates
+                if (cameraRef.current) {
+                    cameraRef.current.position.x = -coordinates.X * 0.5;
+                    cameraRef.current.position.y = -coordinates.Y * 0.5;
+                    cameraRef.current.position.z = 50 - coordinates.Z * 0.5;
+                    
+                    // Apply rotations
+                    cameraRef.current.rotation.z = (coordinates.Roll * Math.PI) / 180;
+                }
+                
+            }, [coordinates]);
+            
+            return <canvas ref={canvasRef} id="canvas-container" />;
+        }
+        
+        // Axis Control Component
+        function AxisControl({ label, value, min, max, onChange, info }) {
+            const sliderRef = useRef(null);
+            const [isDragging, setIsDragging] = useState(false);
+            
+            const handleMouseDown = (e) => {
+                setIsDragging(true);
+                updateValue(e);
+            };
+            
+            const handleMouseMove = useCallback((e) => {
+                if (isDragging) {
+                    updateValue(e);
+                }
+            }, [isDragging]);
+            
+            const handleMouseUp = () => {
+                setIsDragging(false);
+            };
+            
+            const updateValue = (e) => {
+                if (!sliderRef.current) return;
+                const rect = sliderRef.current.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const percentage = Math.max(0, Math.min(1, x / rect.width));
+                const newValue = min + percentage * (max - min);
+                onChange(newValue);
+            };
+            
+            useEffect(() => {
+                if (isDragging) {
+                    document.addEventListener('mousemove', handleMouseMove);
+                    document.addEventListener('mouseup', handleMouseUp);
+                    return () => {
+                        document.removeEventListener('mousemove', handleMouseMove);
+                        document.removeEventListener('mouseup', handleMouseUp);
+                    };
+                }
+            }, [isDragging, handleMouseMove]);
+            
+            const percentage = ((value - min) / (max - min)) * 100;
+            
+            return (
+                <div className="axis-control">
+                    <div className="axis-label">
+                        <span className="axis-name">{info.name}</span>
+                        <span className="axis-value">{value.toFixed(1)}{label.includes('Roll') || label.includes('Pitch') || label.includes('Yaw') ? '°' : ''}</span>
+                    </div>
+                    <div 
+                        ref={sliderRef}
+                        className="axis-slider"
+                        onMouseDown={handleMouseDown}
+                    >
+                        <div className="axis-track" />
+                        <div 
+                            className="axis-marker"
+                            style={{ left: `${percentage}%` }}
+                        />
+                    </div>
+                    <div className="axis-limits">
+                        <span>{info.leftLabel}</span>
+                        <span>{info.rightLabel}</span>
+                    </div>
+                    <div className="axis-description">
+                        {info.getDescription(value)}
+                    </div>
+                </div>
+            );
+        }
+        
+        // Navigation Card Component
+        function NavigationCard({ coordinates, onClose, onCopy }) {
+            const generatePrompt = () => {
+                const roleMap = {
+                    '-10to-7': 'Filósofo/Visionario',
+                    '-7to-3': 'Estratega/Investigador',
+                    '-3to3': 'Arquitecto/Consultor',
+                    '3to7': 'Implementador/Builder',
+                    '7to10': 'Ejecutor/Producer'
+                };
+                
+                let role = 'Consultor General';
+                const y = coordinates.Y;
+                if (y <= -7) role = roleMap['-10to-7'];
+                else if (y <= -3) role = roleMap['-7to-3'];
+                else if (y <= 3) role = roleMap['-3to3'];
+                else if (y <= 7) role = roleMap['3to7'];
+                else role = roleMap['7to10'];
+                
+                const perspective = AXIS_INFO.Roll.getDescription(coordinates.Roll);
+                const concretion = AXIS_INFO.Pitch.getDescription(coordinates.Pitch);
+                const intention = AXIS_INFO.Yaw.getDescription(coordinates.Yaw);
+                
+                return `Actúa como un ${role} con perspectiva ${perspective.toLowerCase()}.
+
+COORDENADAS DE NAVEGACIÓN:
+- Foco: ${coordinates.X.toFixed(1)} (${AXIS_INFO.X.getDescription(coordinates.X)})
+- Profundidad: ${coordinates.Y.toFixed(1)} (${AXIS_INFO.Y.getDescription(coordinates.Y)})
+- Iteración: ${coordinates.Z.toFixed(1)} (${AXIS_INFO.Z.getDescription(coordinates.Z)})
+- Perspectiva: ${coordinates.Roll.toFixed(0)}° (${perspective})
+- Concreción: ${coordinates.Pitch.toFixed(0)}° (${concretion})
+- Intención: ${coordinates.Yaw.toFixed(0)}° (${intention})
+
+CONTEXTO:
+[Inserta aquí el problema o desafío específico]
+
+ENFOQUE:
+- ${perspective}
+- Nivel de output: ${concretion}
+- Modalidad: ${intention}
+
+INSTRUCCIONES:
+1. Aborda el desafío desde la perspectiva definida
+2. Genera ${coordinates.Z > 5 ? '3-5 opciones divergentes (iteración rápida)' : '1-2 opciones bien desarrolladas'}
+3. Entrega en formato ${coordinates.Pitch < -30 ? 'ejecutable inmediato' : 'conceptual con estructura'}
+
+ENTREGABLE:
+[Define el tipo de output esperado según tu necesidad específica]`;
+            };
+            
+            return (
+                <div className="nav-card">
+                    <h2>✅ DOCKING EXITOSO</h2>
+                    <div className="nav-card-section">
+                        <h3>COORDENADAS FINALES</h3>
+                        <p>
+                            <strong>Traslaciones:</strong><br/>
+                            • Foco: {coordinates.X.toFixed(1)} - {AXIS_INFO.X.getDescription(coordinates.X)}<br/>
+                            • Profundidad: {coordinates.Y.toFixed(1)} - {AXIS_INFO.Y.getDescription(coordinates.Y)}<br/>
+                            • Iteración: {coordinates.Z.toFixed(1)} - {AXIS_INFO.Z.getDescription(coordinates.Z)}
+                        </p>
+                        <p style={{marginTop: '10px'}}>
+                            <strong>Rotaciones:</strong><br/>
+                            • Perspectiva: {coordinates.Roll.toFixed(0)}° - {AXIS_INFO.Roll.getDescription(coordinates.Roll)}<br/>
+                            • Concreción: {coordinates.Pitch.toFixed(0)}° - {AXIS_INFO.Pitch.getDescription(coordinates.Pitch)}<br/>
+                            • Intención: {coordinates.Yaw.toFixed(0)}° - {AXIS_INFO.Yaw.getDescription(coordinates.Yaw)}
+                        </p>
+                    </div>
+                    
+                    <div className="nav-card-section">
+                        <h3>PROMPT GENERADO</h3>
+                        <div className="prompt-box">
+                            {generatePrompt()}
+                        </div>
+                    </div>
+                    
+                    <div className="nav-card-actions">
+                        <button className="btn btn-primary" onClick={() => onCopy(generatePrompt())}>
+                            COPIAR PROMPT
+                        </button>
+                        <button className="btn" onClick={onClose}>
+                            NUEVA NAVEGACIÓN
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+        
+        // Main App Component
+        function App() {
+            const [coordinates, setCoordinates] = useState({
+                X: 0, Y: 0, Z: 0,
+                Roll: 0, Pitch: 0, Yaw: 0
+            });
+            
+            const [isDocked, setIsDocked] = useState(false);
+            const [selectedPreset, setSelectedPreset] = useState('neutral');
+            
+            // Target coordinates (can be customized)
+            const target = {
+                X: 0, Y: 0, Z: 5,
+                Roll: 0, Pitch: 0, Yaw: 0
+            };
+            
+            const TOLERANCES = {
+                translation: 1.5,
+                rotation: 15
+            };
+            
+            // Calculate distance to target
+            const calculateDistance = useCallback(() => {
+                const dx = (coordinates.X - target.X) / 10;
+                const dy = (coordinates.Y - target.Y) / 10;
+                const dz = (coordinates.Z - target.Z) / 10;
+                const dRoll = (coordinates.Roll - target.Roll) / 180;
+                const dPitch = (coordinates.Pitch - target.Pitch) / 180;
+                const dYaw = (coordinates.Yaw - target.Yaw) / 180;
+                
+                return Math.sqrt(dx**2 + dy**2 + dz**2 + dRoll**2 + dPitch**2 + dYaw**2);
+            }, [coordinates, target]);
+            
+            // Check if docked
+            const checkDocking = useCallback(() => {
+                const aligned = {
+                    X: Math.abs(coordinates.X - target.X) < TOLERANCES.translation,
+                    Y: Math.abs(coordinates.Y - target.Y) < TOLERANCES.translation,
+                    Z: Math.abs(coordinates.Z - target.Z) < TOLERANCES.translation,
+                    Roll: Math.abs(coordinates.Roll - target.Roll) < TOLERANCES.rotation,
+                    Pitch: Math.abs(coordinates.Pitch - target.Pitch) < TOLERANCES.rotation,
+                    Yaw: Math.abs(coordinates.Yaw - target.Yaw) < TOLERANCES.rotation
+                };
+                
+                return Object.values(aligned).every(v => v === true);
+            }, [coordinates, target]);
+            
+            useEffect(() => {
+                if (checkDocking() && !isDocked) {
+                    setIsDocked(true);
+                }
+            }, [coordinates, checkDocking, isDocked]);
+            
+            // Keyboard controls
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    const speed = 0.5;
+                    const rotSpeed = 5;
+                    
+                    setCoordinates(prev => {
+                        const newCoords = { ...prev };
+                        
+                        switch(e.key.toLowerCase()) {
+                            // Translations
+                            case 'w': newCoords.X = Math.max(-10, prev.X - speed); break;
+                            case 's': newCoords.X = Math.min(10, prev.X + speed); break;
+                            case 'q': newCoords.Y = Math.max(-10, prev.Y - speed); break;
+                            case 'e': newCoords.Y = Math.min(10, prev.Y + speed); break;
+                            case 'a': newCoords.Z = Math.max(-10, prev.Z - speed); break;
+                            case 'd': newCoords.Z = Math.min(10, prev.Z + speed); break;
+                            
+                            // Rotations
+                            case 'i': newCoords.Pitch = Math.min(90, prev.Pitch + rotSpeed); break;
+                            case 'k': newCoords.Pitch = Math.max(-90, prev.Pitch - rotSpeed); break;
+                            case 'j': newCoords.Roll = prev.Roll - rotSpeed; break;
+                            case 'l': newCoords.Roll = prev.Roll + rotSpeed; break;
+                            case 'u': newCoords.Yaw = prev.Yaw - rotSpeed; break;
+                            case 'o': newCoords.Yaw = prev.Yaw + rotSpeed; break;
+                            
+                            // Reset
+                            case ' ':
+                                return { X: 0, Y: 0, Z: 0, Roll: 0, Pitch: 0, Yaw: 0 };
+                        }
+                        
+                        return newCoords;
+                    });
+                };
+                
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, []);
+            
+            const handlePresetChange = (e) => {
+                const preset = e.target.value;
+                setSelectedPreset(preset);
+                if (PRESETS[preset]) {
+                    setCoordinates(PRESETS[preset].coords);
+                    setIsDocked(false);
+                }
+            };
+            
+            const handleCopyPrompt = (prompt) => {
+                navigator.clipboard.writeText(prompt);
+                alert('✅ Prompt copiado al clipboard!');
+            };
+            
+            const distance = calculateDistance();
+            const docked = checkDocking();
+            
+            let status = 'NAVEGANDO LIBREMENTE';
+            let statusClass = 'status-approaching';
+            
+            if (docked) {
+                status = '✅ DOCKED - READY TO GENERATE';
+                statusClass = 'status-docked';
+            } else if (distance < 2) {
+                status = '🟢 CASI ALINEADO - AJUSTE FINO';
+                statusClass = 'status-aligned';
+            } else if (distance < 5) {
+                status = '🟡 APROXIMACIÓN EN PROGRESO';
+                statusClass = 'status-approaching';
+            }
+            
+            return (
+                <div className="container">
+                    <ThreeScene coordinates={coordinates} />
+                    
+                    {/* Left Panel - Translations */}
+                    <div className="panel panel-left">
+                        <h2>Bloque 1: El Espacio</h2>
+                        
+                        <div className="preset-selector">
+                            <label>Configuración inicial:</label>
+                            <select value={selectedPreset} onChange={handlePresetChange}>
+                                {Object.entries(PRESETS).map(([key, preset]) => (
+                                    <option key={key} value={key}>{preset.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        
+                        <AxisControl
+                            label="X"
+                            value={coordinates.X}
+                            min={-10}
+                            max={10}
+                            onChange={(val) => setCoordinates(prev => ({ ...prev, X: val }))}
+                            info={AXIS_INFO.X}
+                        />
+                        
+                        <AxisControl
+                            label="Y"
+                            value={coordinates.Y}
+                            min={-10}
+                            max={10}
+                            onChange={(val) => setCoordinates(prev => ({ ...prev, Y: val }))}
+                            info={AXIS_INFO.Y}
+                        />
+                        
+                        <AxisControl
+                            label="Z"
+                            value={coordinates.Z}
+                            min={-10}
+                            max={10}
+                            onChange={(val) => setCoordinates(prev => ({ ...prev, Z: val }))}
+                            info={AXIS_INFO.Z}
+                        />
+                    </div>
+                    
+                    {/* Right Panel - Rotations */}
+                    <div className="panel panel-right">
+                        <h2>Bloque 2: El Ajuste</h2>
+                        
+                        <AxisControl
+                            label="Roll"
+                            value={coordinates.Roll}
+                            min={-180}
+                            max={180}
+                            onChange={(val) => setCoordinates(prev => ({ ...prev, Roll: val }))}
+                            info={AXIS_INFO.Roll}
+                        />
+                        
+                        <AxisControl
+                            label="Pitch"
+                            value={coordinates.Pitch}
+                            min={-90}
+                            max={90}
+                            onChange={(val) => setCoordinates(prev => ({ ...prev, Pitch: val }))}
+                            info={AXIS_INFO.Pitch}
+                        />
+                        
+                        <AxisControl
+                            label="Yaw"
+                            value={coordinates.Yaw}
+                            min={0}
+                            max={360}
+                            onChange={(val) => setCoordinates(prev => ({ ...prev, Yaw: val }))}
+                            info={AXIS_INFO.Yaw}
+                        />
+                    </div>
+                    
+                    {/* HUD */}
+                    <div className="hud">
+                        <div className="hud-title">6DOF PROMPT NAVIGATOR</div>
+                        <div className={`hud-status ${statusClass}`}>
+                            {status}
+                        </div>
+                        
+                        <div className="telemetry-grid">
+                            <div className="telemetry-item">
+                                <div className="telem-label">X-FOCO</div>
+                                <div className="telem-value">{coordinates.X.toFixed(1)}</div>
+                                <div className="telem-target">Target: {target.X.toFixed(1)}</div>
+                                <div className={`telem-delta ${Math.abs(coordinates.X - target.X) < TOLERANCES.translation ? 'delta-aligned' : 'delta-positive'}`}>
+                                    Δ: {(coordinates.X - target.X).toFixed(1)}
+                                </div>
+                            </div>
+                            
+                            <div className="telemetry-item">
+                                <div className="telem-label">Y-PROFUNDIDAD</div>
+                                <div className="telem-value">{coordinates.Y.toFixed(1)}</div>
+                                <div className="telem-target">Target: {target.Y.toFixed(1)}</div>
+                                <div className={`telem-delta ${Math.abs(coordinates.Y - target.Y) < TOLERANCES.translation ? 'delta-aligned' : 'delta-positive'}`}>
+                                    Δ: {(coordinates.Y - target.Y).toFixed(1)}
+                                </div>
+                            </div>
+                            
+                            <div className="telemetry-item">
+                                <div className="telem-label">Z-ITERACIÓN</div>
+                                <div className="telem-value">{coordinates.Z.toFixed(1)}</div>
+                                <div className="telem-target">Target: {target.Z.toFixed(1)}</div>
+                                <div className={`telem-delta ${Math.abs(coordinates.Z - target.Z) < TOLERANCES.translation ? 'delta-aligned' : 'delta-positive'}`}>
+                                    Δ: {(coordinates.Z - target.Z).toFixed(1)}
+                                </div>
+                            </div>
+                            
+                            <div className="telemetry-item">
+                                <div className="telem-label">ROLL</div>
+                                <div className="telem-value">{coordinates.Roll.toFixed(0)}°</div>
+                                <div className="telem-target">Target: {target.Roll.toFixed(0)}°</div>
+                                <div className={`telem-delta ${Math.abs(coordinates.Roll - target.Roll) < TOLERANCES.rotation ? 'delta-aligned' : 'delta-positive'}`}>
+                                    Δ: {(coordinates.Roll - target.Roll).toFixed(0)}°
+                                </div>
+                            </div>
+                            
+                            <div className="telemetry-item">
+                                <div className="telem-label">PITCH</div>
+                                <div className="telem-value">{coordinates.Pitch.toFixed(0)}°</div>
+                                <div className="telem-target">Target: {target.Pitch.toFixed(0)}°</div>
+                                <div className={`telem-delta ${Math.abs(coordinates.Pitch - target.Pitch) < TOLERANCES.rotation ? 'delta-aligned' : 'delta-positive'}`}>
+                                    Δ: {(coordinates.Pitch - target.Pitch).toFixed(0)}°
+                                </div>
+                            </div>
+                            
+                            <div className="telemetry-item">
+                                <div className="telem-label">YAW</div>
+                                <div className="telem-value">{coordinates.Yaw.toFixed(0)}°</div>
+                                <div className="telem-target">Target: {target.Yaw.toFixed(0)}°</div>
+                                <div className={`telem-delta ${Math.abs(coordinates.Yaw - target.Yaw) < TOLERANCES.rotation ? 'delta-aligned' : 'delta-positive'}`}>
+                                    Δ: {(coordinates.Yaw - target.Yaw).toFixed(0)}°
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="distance-display">
+                            <div className="distance-label">DISTANCIA A TARGET</div>
+                            <div className="distance-value">{distance.toFixed(2)}</div>
+                        </div>
+                    </div>
+                    
+                    {/* Keyboard Hints */}
+                    <div className="keyboard-hints">
+                        <strong>CONTROLES:</strong> W/S=Foco X | Q/E=Profundidad Y | A/D=Iteración Z | 
+                        I/K=Pitch | J/L=Roll | U/O=Yaw | SPACE=Reset
+                    </div>
+                    
+                    {/* Navigation Card */}
+                    {isDocked && (
+                        <NavigationCard
+                            coordinates={coordinates}
+                            onClose={() => {
+                                setIsDocked(false);
+                                setCoordinates({ X: 0, Y: 0, Z: 0, Roll: 0, Pitch: 0, Yaw: 0 });
+                            }}
+                            onCopy={handleCopyPrompt}
+                        />
+                    )}
+                </div>
+            );
+        }
+        
+        // Render
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

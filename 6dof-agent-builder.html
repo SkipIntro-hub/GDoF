@@ -1,0 +1,1720 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>6DoF Agent Builder</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #020617;
+      --secondary: #0f172a;
+      --accent: #38bdf8;
+      --accent2: #22c55e;
+      --text: #e5e7eb;
+      --text-dim: #9ca3af;
+      --border: #1f293b;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: radial-gradient(circle at top, var(--primary) 0, var(--primary) 100%);
+      color: var(--text);
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container { max-width: 1400px; margin: 0 auto; }
+
+    /* Header */
+    header {
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header-left h1 {
+      font-size: 28px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-primary {
+      padding: 12px 24px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: var(--primary);
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(56, 189, 248, 0.4);
+    }
+
+    .btn-secondary {
+      padding: 12px 24px;
+      background: rgba(56, 189, 248, 0.1);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(56, 189, 248, 0.2);
+      transform: translateY(-2px);
+    }
+
+    /* Preset Panel */
+    .preset-panel {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      backdrop-filter: blur(10px);
+      margin-bottom: 24px;
+    }
+
+    .preset-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .preset-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+
+    .preset-badge {
+      font-size: 10px;
+      padding: 4px 10px;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      border-radius: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
+    .preset-card {
+      background: rgba(0, 0, 0, 0.3);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .preset-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .preset-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(56, 189, 248, 0.2);
+    }
+
+    .preset-card:hover::before {
+      opacity: 1;
+    }
+
+    .preset-card.active {
+      border-color: var(--accent2);
+      background: rgba(34, 197, 94, 0.08);
+      box-shadow: 0 0 0 1px var(--accent2), 0 8px 20px rgba(34, 197, 94, 0.2);
+    }
+
+    .preset-card.active::before {
+      background: linear-gradient(90deg, transparent, var(--accent2), transparent);
+      opacity: 1;
+    }
+
+    .preset-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .preset-icon {
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .preset-check {
+      font-size: 18px;
+      color: var(--accent2);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .preset-card.active .preset-check {
+      opacity: 1;
+    }
+
+    .preset-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .preset-desc {
+      font-size: 11px;
+      color: var(--text-dim);
+      line-height: 1.4;
+      margin-bottom: 12px;
+      min-height: 32px;
+    }
+
+    .preset-stats {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .preset-stat {
+      font-size: 9px;
+      padding: 3px 6px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 4px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .preset-card.active .preset-stat {
+      background: rgba(34, 197, 94, 0.1);
+      border-color: rgba(34, 197, 94, 0.3);
+      color: var(--accent2);
+    }
+
+    /* Agents Library Panel */
+    .agents-panel {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      backdrop-filter: blur(10px);
+      margin-bottom: 24px;
+    }
+
+    .agents-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .agents-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .agent-card {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 40px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      transition: all 0.2s;
+    }
+
+    .agent-card:hover {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.05);
+    }
+
+    .agent-icon {
+      font-size: 32px;
+      text-align: center;
+    }
+
+    .agent-info {
+      flex: 1;
+    }
+
+    .agent-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .agent-meta {
+      font-size: 11px;
+      color: var(--text-dim);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .agent-tag {
+      padding: 2px 6px;
+      background: rgba(56, 189, 248, 0.1);
+      border-radius: 3px;
+      font-size: 10px;
+    }
+
+    .agent-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.3);
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+
+    .btn-icon:hover {
+      background: rgba(56, 189, 248, 0.1);
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: scale(1.1);
+    }
+
+    .btn-icon.danger:hover {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-dim);
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+
+    /* Main Layout */
+    .main-layout {
+      display: grid;
+      grid-template-columns: 340px 340px 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    /* Panel */
+    .panel {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      backdrop-filter: blur(10px);
+    }
+
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin: 20px 0 12px;
+      font-weight: 600;
+    }
+
+    .section-title:first-child { margin-top: 0; }
+
+    /* Axis Control */
+    .axis-control {
+      margin-bottom: 20px;
+      padding: 14px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      position: relative;
+    }
+
+    .axis-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .axis-title-group {
+      flex: 1;
+    }
+
+    .axis-tag {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+
+    .axis-name {
+      font-size: 15px;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .axis-value {
+      font-size: 14px;
+      color: var(--text);
+      font-weight: 600;
+      background: rgba(56, 189, 248, 0.15);
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+
+    .axis-poles {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-dim);
+      margin: 8px 0;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 4px;
+      background: var(--primary);
+      outline: none;
+      box-shadow: inset 0 0 0 1px var(--border);
+      margin: 8px 0;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid var(--primary);
+      box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.3);
+    }
+
+    .axis-state {
+      text-align: center;
+      font-size: 12px;
+      color: var(--accent2);
+      font-weight: 500;
+      margin-top: 6px;
+      padding: 4px;
+      background: rgba(34, 197, 94, 0.1);
+      border-radius: 4px;
+    }
+
+    /* Form Controls */
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 10px;
+      background: var(--primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+    }
+
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    input[type="text"]:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .hint {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(5px);
+      z-index: 1000;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background: var(--secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .modal-close:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .btn-full {
+      flex: 1;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+
+    .btn-cancel {
+      background: rgba(156, 163, 175, 0.1);
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+    }
+
+    .btn-cancel:hover {
+      background: rgba(156, 163, 175, 0.2);
+      color: var(--text);
+    }
+
+    .btn-save {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: var(--primary);
+    }
+
+    .btn-save:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(56, 189, 248, 0.4);
+    }
+
+    /* Export Options */
+    .export-options {
+      display: grid;
+      gap: 12px;
+    }
+
+    .export-option {
+      background: rgba(0, 0, 0, 0.3);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .export-option:hover {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.05);
+    }
+
+    .export-option.selected {
+      border-color: var(--accent2);
+      background: rgba(34, 197, 94, 0.08);
+    }
+
+    .export-icon {
+      font-size: 32px;
+    }
+
+    .export-info {
+      flex: 1;
+    }
+
+    .export-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .export-desc {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .export-output {
+      background: var(--primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--text);
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 16px;
+    }
+
+    /* Visualization */
+    .viz-panel { position: relative; }
+
+    #radarChart {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .coherence-section {
+      margin-top: 20px;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .coherence-header {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    .coherence-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .coherence-item {
+      text-align: center;
+    }
+
+    .coherence-label {
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+
+    .coherence-value {
+      font-size: 18px;
+      font-weight: 700;
+      padding: 8px;
+      border-radius: 6px;
+    }
+
+    .coherence-value.high {
+      color: var(--accent2);
+      background: rgba(34, 197, 94, 0.15);
+    }
+
+    .coherence-value.medium {
+      color: var(--warning);
+      background: rgba(245, 158, 11, 0.15);
+    }
+
+    .coherence-value.low {
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.15);
+    }
+
+    /* Dock Button */
+    .dock-button {
+      width: 100%;
+      margin-top: 16px;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: var(--primary);
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      box-shadow: 0 8px 20px rgba(56, 189, 248, 0.3);
+    }
+
+    .dock-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(56, 189, 248, 0.4);
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .preset-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="header-left">
+        <h1>6DoF Agent Builder</h1>
+        <p class="subtitle">
+          Configurá y guardá agentes de IA personalizados usando los 6 grados de libertad
+        </p>
+      </div>
+      <div class="header-actions">
+        <button class="btn-secondary" onclick="toggleAgentsPanel()">
+          📚 Mis Agentes (<span id="agent-count">0</span>)
+        </button>
+        <button class="btn-primary" onclick="openSetAgentModal()">
+          🤖 Setear Agente IA
+        </button>
+      </div>
+    </header>
+
+    <!-- Agents Library Panel (collapsible) -->
+    <div class="agents-panel" id="agents-panel" style="display: none;">
+      <div class="agents-header">
+        <div class="preset-title">Mis Agentes Guardados</div>
+      </div>
+      <div class="agents-list" id="agents-list">
+        <div class="empty-state">
+          <div class="empty-state-icon">🤖</div>
+          <div>No tenés agentes guardados todavía</div>
+          <div style="margin-top: 8px; font-size: 12px;">Creá tu primer agente usando el botón "Setear Agente IA"</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preset Panel -->
+    <div class="preset-panel">
+      <div class="preset-header">
+        <div class="preset-title">Configuraciones Predefinidas</div>
+        <div class="preset-badge">Quick Start</div>
+      </div>
+      <div class="preset-grid">
+        <div class="preset-card active" data-preset="custom">
+          <div class="preset-card-header">
+            <span class="preset-icon">⚙️</span>
+            <span class="preset-check">✓</span>
+          </div>
+          <div class="preset-name">Custom</div>
+          <div class="preset-desc">Configuración personalizada manual</div>
+          <div class="preset-stats">
+            <span class="preset-stat">Flexible</span>
+          </div>
+        </div>
+
+        <div class="preset-card" data-preset="quick_analysis">
+          <div class="preset-card-header">
+            <span class="preset-icon">⚡</span>
+            <span class="preset-check">✓</span>
+          </div>
+          <div class="preset-name">Quick Analysis</div>
+          <div class="preset-desc">Análisis rápido y sintético</div>
+          <div class="preset-stats">
+            <span class="preset-stat">Speed</span>
+            <span class="preset-stat">Casual</span>
+          </div>
+        </div>
+
+        <div class="preset-card" data-preset="deep_research">
+          <div class="preset-card-header">
+            <span class="preset-icon">🔬</span>
+            <span class="preset-check">✓</span>
+          </div>
+          <div class="preset-name">Deep Research</div>
+          <div class="preset-desc">Investigación exhaustiva y rigurosa</div>
+          <div class="preset-stats">
+            <span class="preset-stat">Depth</span>
+            <span class="preset-stat">Expert</span>
+          </div>
+        </div>
+
+        <div class="preset-card" data-preset="creative_brief">
+          <div class="preset-card-header">
+            <span class="preset-icon">🎨</span>
+            <span class="preset-check">✓</span>
+          </div>
+          <div class="preset-name">Creative Brief</div>
+          <div class="preset-desc">Contenido creativo y atractivo</div>
+          <div class="preset-stats">
+            <span class="preset-stat">Creative</span>
+            <span class="preset-stat">Flow</span>
+          </div>
+        </div>
+
+        <div class="preset-card" data-preset="exec_summary">
+          <div class="preset-card-header">
+            <span class="preset-icon">📊</span>
+            <span class="preset-check">✓</span>
+          </div>
+          <div class="preset-name">Exec Summary</div>
+          <div class="preset-desc">Resumen ejecutivo estructurado</div>
+          <div class="preset-stats">
+            <span class="preset-stat">Concise</span>
+            <span class="preset-stat">Format</span>
+          </div>
+        </div>
+
+        <div class="preset-card" data-preset="technical_doc">
+          <div class="preset-card-header">
+            <span class="preset-icon">📝</span>
+            <span class="preset-check">✓</span>
+          </div>
+          <div class="preset-name">Technical Doc</div>
+          <div class="preset-desc">Documentación técnica detallada</div>
+          <div class="preset-stats">
+            <span class="preset-stat">Precise</span>
+            <span class="preset-stat">Formal</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-layout">
+      <!-- Traslaciones Panel -->
+      <div class="panel">
+        <div class="section-title">Traslaciones (QUÉ)</div>
+
+        <div class="axis-control">
+          <div class="axis-header">
+            <div class="axis-title-group">
+              <div class="axis-tag">T1 - AMPLITUD</div>
+              <div class="axis-name">Alcance</div>
+            </div>
+            <div class="axis-value" id="d1-value">3/5</div>
+          </div>
+          <div class="axis-poles">
+            <span>Focal</span>
+            <span>Expansivo</span>
+          </div>
+          <input type="range" id="d1" min="1" max="5" value="3" oninput="updateAxis('d1')">
+          <div class="axis-state" id="d1-state">Amplio</div>
+        </div>
+
+        <div class="axis-control">
+          <div class="axis-header">
+            <div class="axis-title-group">
+              <div class="axis-tag">T2 - DETALLE</div>
+              <div class="axis-name">Profundidad</div>
+            </div>
+            <div class="axis-value" id="d2-value">3/5</div>
+          </div>
+          <div class="axis-poles">
+            <span>Superficial</span>
+            <span>Exhaustivo</span>
+          </div>
+          <input type="range" id="d2" min="1" max="5" value="3" oninput="updateAxis('d2')">
+          <div class="axis-state" id="d2-state">Balanceado</div>
+        </div>
+
+        <div class="axis-control">
+          <div class="axis-header">
+            <div class="axis-title-group">
+              <div class="axis-tag">T3 - ESTRUCTURA</div>
+              <div class="axis-name">Formato</div>
+            </div>
+            <div class="axis-value" id="d3-value">3/5</div>
+          </div>
+          <div class="axis-poles">
+            <span>Fluido</span>
+            <span>Estructurado</span>
+          </div>
+          <input type="range" id="d3" min="1" max="5" value="3" oninput="updateAxis('d3')">
+          <div class="axis-state" id="d3-state">Organizado</div>
+        </div>
+      </div>
+
+      <!-- Rotaciones Panel -->
+      <div class="panel">
+        <div class="section-title">Rotaciones (CÓMO)</div>
+
+        <div class="axis-control">
+          <div class="axis-header">
+            <div class="axis-title-group">
+              <div class="axis-tag">R1 - TONO</div>
+              <div class="axis-name">Estilo</div>
+            </div>
+            <div class="axis-value" id="d4-value">3/5</div>
+          </div>
+          <div class="axis-poles">
+            <span>Casual</span>
+            <span>Formal</span>
+          </div>
+          <input type="range" id="d4" min="1" max="5" value="3" oninput="updateAxis('d4')">
+          <div class="axis-state" id="d4-state">Profesional</div>
+        </div>
+
+        <div class="axis-control">
+          <div class="axis-header">
+            <div class="axis-title-group">
+              <div class="axis-tag">R2 - RAZONAMIENTO</div>
+              <div class="axis-name">Lógica</div>
+            </div>
+            <div class="axis-value" id="d5-value">3/5</div>
+          </div>
+          <div class="axis-poles">
+            <span>Intuitivo</span>
+            <span>Analítico</span>
+          </div>
+          <input type="range" id="d5" min="1" max="5" value="3" oninput="updateAxis('d5')">
+          <div class="axis-state" id="d5-state">Equilibrado</div>
+        </div>
+
+        <div class="axis-control">
+          <div class="axis-header">
+            <div class="axis-title-group">
+              <div class="axis-tag">R3 - PRECISIÓN</div>
+              <div class="axis-name">Rigor</div>
+            </div>
+            <div class="axis-value" id="d6-value">3/5</div>
+          </div>
+          <div class="axis-poles">
+            <span>Flexible</span>
+            <span>Exacto</span>
+          </div>
+          <input type="range" id="d6" min="1" max="5" value="3" oninput="updateAxis('d6')">
+          <div class="axis-state" id="d6-state">Preciso</div>
+        </div>
+      </div>
+
+      <!-- Visualization Panel -->
+      <div class="panel viz-panel">
+        <div class="section-title">Visualización 6DoF</div>
+        <canvas id="radarChart"></canvas>
+
+        <div class="coherence-section">
+          <div class="coherence-header">Análisis de Configuración</div>
+          <div class="coherence-grid">
+            <div class="coherence-item">
+              <div class="coherence-label">Coherencia</div>
+              <div class="coherence-value high" id="coherence-score">100%</div>
+            </div>
+            <div class="coherence-item">
+              <div class="coherence-label">Perfil</div>
+              <div class="coherence-value high" id="profile-match">Balanced</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Setear Agente IA -->
+    <div class="modal" id="set-agent-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="modal-title">🤖 Setear Agente IA</div>
+          <button class="modal-close" onclick="closeSetAgentModal()">×</button>
+        </div>
+
+        <div class="form-group">
+          <label>Nombre del Agente</label>
+          <input type="text" id="agent-name" placeholder="Ej: Analista Financiero Facimex">
+          <div class="hint">Dale un nombre descriptivo a tu agente</div>
+        </div>
+
+        <div class="form-group">
+          <label>Descripción del Rol</label>
+          <textarea id="agent-role" placeholder="Ej: Especialista en análisis crediticio para el mercado argentino, enfocado en ALyCs y títulos de deuda..."></textarea>
+          <div class="hint">Describí qué hace este agente y cuál es su expertise</div>
+        </div>
+
+        <div class="form-group">
+          <label>Contexto Adicional (Opcional)</label>
+          <textarea id="agent-context" placeholder="Ej: Trabajás con Facimex, Portfolio Investment, y MatchFin. Conocés las regulaciones de CNV..."></textarea>
+          <div class="hint">Añadí contexto específico, reglas, o información de dominio</div>
+        </div>
+
+        <div class="form-group">
+          <label>Configuración 6DoF Actual</label>
+          <div style="font-size: 12px; color: var(--text-dim); background: rgba(0,0,0,0.3); padding: 12px; border-radius: 6px; border: 1px solid var(--border);">
+            <div id="agent-6dof-summary">
+              T1: Alcance = <strong>Amplio</strong> (3/5)<br>
+              T2: Profundidad = <strong>Balanceado</strong> (3/5)<br>
+              T3: Formato = <strong>Organizado</strong> (3/5)<br>
+              R1: Estilo = <strong>Profesional</strong> (3/5)<br>
+              R2: Lógica = <strong>Equilibrado</strong> (3/5)<br>
+              R3: Rigor = <strong>Preciso</strong> (3/5)
+            </div>
+          </div>
+          <div class="hint">Esta configuración se guardará con el agente</div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn-full btn-cancel" onclick="closeSetAgentModal()">Cancelar</button>
+          <button class="btn-full btn-save" onclick="saveAgent()">💾 Guardar Agente</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Exportar Agente -->
+    <div class="modal" id="export-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="modal-title">📤 Exportar Agente</div>
+          <button class="modal-close" onclick="closeExportModal()">×</button>
+        </div>
+
+        <div class="form-group">
+          <label>Seleccioná el formato de exportación</label>
+          <div class="export-options">
+            <div class="export-option selected" data-format="custom-gpt" onclick="selectExportFormat('custom-gpt')">
+              <span class="export-icon">🤖</span>
+              <div class="export-info">
+                <div class="export-name">Custom GPT (OpenAI)</div>
+                <div class="export-desc">Instructions + Conversation Starters</div>
+              </div>
+            </div>
+
+            <div class="export-option" data-format="claude-project" onclick="selectExportFormat('claude-project')">
+              <span class="export-icon">🧠</span>
+              <div class="export-info">
+                <div class="export-name">Claude Project</div>
+                <div class="export-desc">Custom Instructions format</div>
+              </div>
+            </div>
+
+            <div class="export-option" data-format="gemini" onclick="selectExportFormat('gemini')">
+              <span class="export-icon">💎</span>
+              <div class="export-info">
+                <div class="export-name">Google Gemini</div>
+                <div class="export-desc">System Instructions</div>
+              </div>
+            </div>
+
+            <div class="export-option" data-format="universal" onclick="selectExportFormat('universal')">
+              <span class="export-icon">🌐</span>
+              <div class="export-info">
+                <div class="export-name">Universal Prompt</div>
+                <div class="export-desc">Compatible con cualquier LLM</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="export-output" id="export-output">
+          <!-- Generated export content -->
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn-full btn-cancel" onclick="closeExportModal()">Cerrar</button>
+          <button class="btn-full btn-secondary" onclick="downloadExport()">⬇️ Descargar .txt</button>
+          <button class="btn-full btn-save" onclick="copyExport()">📋 Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Global state
+    let agents = [];
+    let currentAgent = null;
+    let currentExportFormat = 'custom-gpt';
+    let editingAgentId = null;
+
+    // Presets
+    const presets = {
+      custom: { d1: 3, d2: 3, d3: 3, d4: 3, d5: 3, d6: 3 },
+      quick_analysis: { d1: 2, d2: 2, d3: 3, d4: 2, d5: 3, d6: 2 },
+      deep_research: { d1: 5, d2: 5, d3: 4, d4: 4, d5: 5, d6: 5 },
+      creative_brief: { d1: 3, d2: 3, d3: 4, d4: 2, d5: 2, d6: 2 },
+      exec_summary: { d1: 2, d2: 3, d3: 5, d4: 4, d5: 4, d6: 4 },
+      technical_doc: { d1: 4, d2: 5, d3: 5, d4: 5, d5: 5, d6: 5 }
+    };
+
+    // Axis configuration
+    const config = {
+      d1: {
+        name: "Alcance",
+        states: ["Focal", "Acotado", "Amplio", "Extenso", "Expansivo"]
+      },
+      d2: {
+        name: "Profundidad",
+        states: ["Superficial", "Ligero", "Balanceado", "Profundo", "Exhaustivo"]
+      },
+      d3: {
+        name: "Formato",
+        states: ["Fluido", "Flexible", "Organizado", "Estructurado", "Formal"]
+      },
+      d4: {
+        name: "Estilo",
+        states: ["Casual", "Amigable", "Profesional", "Corporativo", "Formal"]
+      },
+      d5: {
+        name: "Lógica",
+        states: ["Intuitivo", "Narrativo", "Equilibrado", "Razonado", "Analítico"]
+      },
+      d6: {
+        name: "Rigor",
+        states: ["Flexible", "Adaptable", "Preciso", "Estricto", "Exacto"]
+      }
+    };
+
+    // Chart
+    let radarChart;
+
+    function initChart() {
+      const ctx = document.getElementById('radarChart').getContext('2d');
+      radarChart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: [
+            'T1: Alcance', 
+            'T2: Profundidad', 
+            'T3: Formato',
+            'R1: Estilo', 
+            'R2: Lógica', 
+            'R3: Rigor'
+          ],
+          datasets: [
+            {
+              label: 'Traslaciones',
+              data: [3, 3, 3, 0, 0, 0],
+              borderColor: 'rgba(56, 189, 248, 1)',
+              backgroundColor: 'rgba(56, 189, 248, 0.2)',
+              borderWidth: 2,
+              pointBackgroundColor: 'rgba(56, 189, 248, 1)',
+              pointBorderColor: '#fff',
+              pointHoverBackgroundColor: '#fff',
+              pointHoverBorderColor: 'rgba(56, 189, 248, 1)'
+            },
+            {
+              label: 'Rotaciones',
+              data: [0, 0, 0, 3, 3, 3],
+              borderColor: 'rgba(34, 197, 94, 1)',
+              backgroundColor: 'rgba(34, 197, 94, 0.2)',
+              borderWidth: 2,
+              pointBackgroundColor: 'rgba(34, 197, 94, 1)',
+              pointBorderColor: '#fff',
+              pointHoverBackgroundColor: '#fff',
+              pointHoverBorderColor: 'rgba(34, 197, 94, 1)'
+            }
+          ]
+        },
+        options: {
+          scales: {
+            r: {
+              min: 0,
+              max: 5,
+              ticks: { 
+                stepSize: 1, 
+                color: '#9ca3af',
+                backdropColor: 'transparent'
+              },
+              grid: { color: '#1f293b' },
+              pointLabels: { 
+                color: '#e5e7eb', 
+                font: { size: 11 }
+              },
+              angleLines: { color: '#1f293b' }
+            }
+          },
+          plugins: {
+            legend: { 
+              display: true,
+              position: 'bottom',
+              labels: {
+                color: '#e5e7eb',
+                font: { size: 11 },
+                padding: 12
+              }
+            }
+          },
+          maintainAspectRatio: true,
+          responsive: true
+        }
+      });
+    }
+
+    function updateChart() {
+      const values = ['d1', 'd2', 'd3', 'd4', 'd5', 'd6'].map(id => 
+        parseInt(document.getElementById(id).value)
+      );
+      
+      radarChart.data.datasets[0].data = [values[0], values[1], values[2], 0, 0, 0];
+      radarChart.data.datasets[1].data = [0, 0, 0, values[3], values[4], values[5]];
+      radarChart.update();
+    }
+
+    function updateAxis(id) {
+      const value = parseInt(document.getElementById(id).value);
+      const idx = value - 1;
+      
+      document.getElementById(`${id}-value`).textContent = `${value}/5`;
+      document.getElementById(`${id}-state`).textContent = config[id].states[idx];
+      
+      updateChart();
+      validateCoherence();
+      update6DoFSummary();
+      
+      setActivePreset('custom');
+    }
+
+    function update6DoFSummary() {
+      const values = {
+        d1: parseInt(document.getElementById('d1').value),
+        d2: parseInt(document.getElementById('d2').value),
+        d3: parseInt(document.getElementById('d3').value),
+        d4: parseInt(document.getElementById('d4').value),
+        d5: parseInt(document.getElementById('d5').value),
+        d6: parseInt(document.getElementById('d6').value)
+      };
+
+      const summary = `
+        T1: Alcance = <strong>${config.d1.states[values.d1 - 1]}</strong> (${values.d1}/5)<br>
+        T2: Profundidad = <strong>${config.d2.states[values.d2 - 1]}</strong> (${values.d2}/5)<br>
+        T3: Formato = <strong>${config.d3.states[values.d3 - 1]}</strong> (${values.d3}/5)<br>
+        R1: Estilo = <strong>${config.d4.states[values.d4 - 1]}</strong> (${values.d4}/5)<br>
+        R2: Lógica = <strong>${config.d5.states[values.d5 - 1]}</strong> (${values.d5}/5)<br>
+        R3: Rigor = <strong>${config.d6.states[values.d6 - 1]}</strong> (${values.d6}/5)
+      `;
+
+      document.getElementById('agent-6dof-summary').innerHTML = summary;
+    }
+
+    function setActivePreset(presetId) {
+      document.querySelectorAll('.preset-card').forEach(card => {
+        card.classList.remove('active');
+      });
+      document.querySelector(`[data-preset="${presetId}"]`).classList.add('active');
+    }
+
+    function loadPreset(presetId) {
+      const preset = presets[presetId];
+      Object.keys(preset).forEach(key => {
+        document.getElementById(key).value = preset[key];
+        updateAxis(key);
+      });
+      setActivePreset(presetId);
+    }
+
+    function validateCoherence() {
+      const values = {
+        d1: parseInt(document.getElementById('d1').value),
+        d2: parseInt(document.getElementById('d2').value),
+        d3: parseInt(document.getElementById('d3').value),
+        d4: parseInt(document.getElementById('d4').value),
+        d5: parseInt(document.getElementById('d5').value),
+        d6: parseInt(document.getElementById('d6').value)
+      };
+
+      let score = 100;
+
+      if (values.d1 <= 2 && values.d3 >= 4) score -= 15;
+      if (values.d2 <= 2 && values.d3 >= 4) score -= 15;
+      if (values.d6 >= 4 && values.d4 <= 2) score -= 10;
+      if (values.d5 >= 4 && values.d1 <= 2) score -= 10;
+
+      const scoreEl = document.getElementById('coherence-score');
+      scoreEl.textContent = `${Math.max(0, score)}%`;
+      scoreEl.className = 'coherence-value ' + (score >= 80 ? 'high' : score >= 60 ? 'medium' : 'low');
+
+      const avg = (values.d1 + values.d2 + values.d3 + values.d4 + values.d5 + values.d6) / 6;
+      let profile = 'Balanced';
+      if (avg <= 2) profile = 'Explorer';
+      else if (avg >= 4) profile = 'Executor';
+      else if (values.d4 <= 2) profile = 'Creative';
+      else if (values.d4 >= 4) profile = 'Expert';
+      
+      document.getElementById('profile-match').textContent = profile;
+    }
+
+    // Agent Management
+    function loadAgents() {
+      const stored = localStorage.getItem('6dof-agents');
+      agents = stored ? JSON.parse(stored) : [];
+      renderAgentsList();
+      updateAgentCount();
+    }
+
+    function saveAgents() {
+      localStorage.setItem('6dof-agents', JSON.stringify(agents));
+      renderAgentsList();
+      updateAgentCount();
+    }
+
+    function updateAgentCount() {
+      document.getElementById('agent-count').textContent = agents.length;
+    }
+
+    function renderAgentsList() {
+      const list = document.getElementById('agents-list');
+      
+      if (agents.length === 0) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🤖</div>
+            <div>No tenés agentes guardados todavía</div>
+            <div style="margin-top: 8px; font-size: 12px;">Creá tu primer agente usando el botón "Setear Agente IA"</div>
+          </div>
+        `;
+        return;
+      }
+
+      list.innerHTML = agents.map(agent => `
+        <div class="agent-card">
+          <div class="agent-icon">🤖</div>
+          <div class="agent-info">
+            <div class="agent-name">${agent.name}</div>
+            <div class="agent-meta">
+              <span class="agent-tag">6DoF v4.0</span>
+              <span style="opacity: 0.6;">Creado ${new Date(agent.created).toLocaleDateString()}</span>
+            </div>
+          </div>
+          <div class="agent-actions">
+            <button class="btn-icon" onclick="loadAgentConfig('${agent.id}')" title="Cargar configuración">
+              📥
+            </button>
+            <button class="btn-icon" onclick="editAgent('${agent.id}')" title="Editar">
+              ✏️
+            </button>
+            <button class="btn-icon" onclick="exportAgent('${agent.id}')" title="Exportar">
+              📤
+            </button>
+            <button class="btn-icon danger" onclick="deleteAgent('${agent.id}')" title="Eliminar">
+              🗑️
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toggleAgentsPanel() {
+      const panel = document.getElementById('agents-panel');
+      panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function openSetAgentModal() {
+      editingAgentId = null;
+      document.getElementById('agent-name').value = '';
+      document.getElementById('agent-role').value = '';
+      document.getElementById('agent-context').value = '';
+      update6DoFSummary();
+      document.getElementById('set-agent-modal').classList.add('active');
+    }
+
+    function closeSetAgentModal() {
+      document.getElementById('set-agent-modal').classList.remove('active');
+      editingAgentId = null;
+    }
+
+    function saveAgent() {
+      const name = document.getElementById('agent-name').value.trim();
+      const role = document.getElementById('agent-role').value.trim();
+      const context = document.getElementById('agent-context').value.trim();
+
+      if (!name) {
+        alert('⚠️ Por favor ingresá un nombre para el agente');
+        return;
+      }
+
+      if (!role) {
+        alert('⚠️ Por favor describí el rol del agente');
+        return;
+      }
+
+      const config6dof = {
+        d1: parseInt(document.getElementById('d1').value),
+        d2: parseInt(document.getElementById('d2').value),
+        d3: parseInt(document.getElementById('d3').value),
+        d4: parseInt(document.getElementById('d4').value),
+        d5: parseInt(document.getElementById('d5').value),
+        d6: parseInt(document.getElementById('d6').value)
+      };
+
+      const agent = {
+        id: editingAgentId || `agent_${Date.now()}`,
+        name: name,
+        role: role,
+        context: context,
+        config: config6dof,
+        created: editingAgentId ? agents.find(a => a.id === editingAgentId).created : new Date().toISOString(),
+        updated: new Date().toISOString()
+      };
+
+      if (editingAgentId) {
+        const index = agents.findIndex(a => a.id === editingAgentId);
+        agents[index] = agent;
+      } else {
+        agents.push(agent);
+      }
+
+      saveAgents();
+      closeSetAgentModal();
+      alert('✅ Agente guardado correctamente');
+
+      // Show agents panel if it was hidden
+      document.getElementById('agents-panel').style.display = 'block';
+    }
+
+    function loadAgentConfig(agentId) {
+      const agent = agents.find(a => a.id === agentId);
+      if (!agent) return;
+
+      Object.keys(agent.config).forEach(key => {
+        document.getElementById(key).value = agent.config[key];
+        updateAxis(key);
+      });
+
+      alert(`✅ Configuración de "${agent.name}" cargada`);
+    }
+
+    function editAgent(agentId) {
+      const agent = agents.find(a => a.id === agentId);
+      if (!agent) return;
+
+      editingAgentId = agentId;
+      
+      // Load config to sliders
+      Object.keys(agent.config).forEach(key => {
+        document.getElementById(key).value = agent.config[key];
+        updateAxis(key);
+      });
+
+      // Load form data
+      document.getElementById('agent-name').value = agent.name;
+      document.getElementById('agent-role').value = agent.role;
+      document.getElementById('agent-context').value = agent.context || '';
+      
+      update6DoFSummary();
+      document.getElementById('set-agent-modal').classList.add('active');
+    }
+
+    function deleteAgent(agentId) {
+      const agent = agents.find(a => a.id === agentId);
+      if (!agent) return;
+
+      if (!confirm(`¿Eliminar el agente "${agent.name}"?`)) return;
+
+      agents = agents.filter(a => a.id !== agentId);
+      saveAgents();
+      alert('✅ Agente eliminado');
+    }
+
+    function exportAgent(agentId) {
+      const agent = agents.find(a => a.id === agentId);
+      if (!agent) return;
+
+      currentAgent = agent;
+      currentExportFormat = 'custom-gpt';
+      selectExportFormat('custom-gpt');
+      document.getElementById('export-modal').classList.add('active');
+    }
+
+    function closeExportModal() {
+      document.getElementById('export-modal').classList.remove('active');
+      currentAgent = null;
+    }
+
+    function selectExportFormat(format) {
+      currentExportFormat = format;
+      
+      document.querySelectorAll('.export-option').forEach(opt => {
+        opt.classList.remove('selected');
+      });
+      document.querySelector(`[data-format="${format}"]`).classList.add('selected');
+
+      generateExport();
+    }
+
+    function generateExport() {
+      if (!currentAgent) return;
+
+      const agent = currentAgent;
+      const cfg = agent.config;
+      
+      let output = '';
+
+      if (currentExportFormat === 'custom-gpt') {
+        output = `# Custom GPT Configuration
+# Copiá esto en "Instructions" de tu Custom GPT
+
+## Identidad y Rol
+${agent.role}
+
+${agent.context ? `## Contexto y Conocimiento\n${agent.context}\n` : ''}
+## Configuración 6DoF (Método de Trabajo)
+
+### TRASLACIONES - QUÉ trabajar
+- **T1 - Alcance:** ${config.d1.states[cfg.d1 - 1]} (${cfg.d1}/5)
+  Determiná el alcance de tu análisis/respuesta según este nivel.
+
+- **T2 - Profundidad:** ${config.d2.states[cfg.d2 - 1]} (${cfg.d2}/5)
+  Ajustá el nivel de detalle y exhaustividad según este parámetro.
+
+- **T3 - Formato:** ${config.d3.states[cfg.d3 - 1]} (${cfg.d3}/5)
+  Estructurá tu respuesta según este nivel de formalidad en el formato.
+
+### ROTACIONES - CÓMO trabajar
+- **R1 - Estilo:** ${config.d4.states[cfg.d4 - 1]} (${cfg.d4}/5)
+  Usá este tono en tu comunicación.
+
+- **R2 - Lógica:** ${config.d5.states[cfg.d5 - 1]} (${cfg.d5}/5)
+  Aplicá este tipo de razonamiento en tu análisis.
+
+- **R3 - Rigor:** ${config.d6.states[cfg.d6 - 1]} (${cfg.d6}/5)
+  Mantené este nivel de precisión y exactitud.
+
+## Instrucciones de Operación
+1. SIEMPRE aplicá los 6 parámetros definidos arriba en cada respuesta
+2. Mantené consistencia con tu rol y expertise
+3. Usá el contexto proporcionado para informar tus respuestas
+4. Si algo está fuera de tu expertise, indicalo claramente
+
+---
+# Conversation Starters (sugeridos)
+- "Analizá este [documento/situación] aplicando tu metodología 6DoF"
+- "Dame tu perspectiva experta sobre [tema]"
+- "Ayudame a estructurar [proyecto/análisis]"
+- "Revisá este trabajo y dame feedback constructivo"`;
+
+      } else if (currentExportFormat === 'claude-project') {
+        output = `# Claude Project - Custom Instructions
+# Copiá esto en "Project knowledge" o "Custom instructions"
+
+${agent.role}
+
+${agent.context ? `\n${agent.context}\n` : ''}
+## Configuración de Trabajo (6DoF)
+
+Aplicá siempre estos parámetros en tus respuestas:
+
+**Traslaciones (QUÉ):**
+- Alcance: ${config.d1.states[cfg.d1 - 1]} (${cfg.d1}/5)
+- Profundidad: ${config.d2.states[cfg.d2 - 1]} (${cfg.d2}/5)  
+- Formato: ${config.d3.states[cfg.d3 - 1]} (${cfg.d3}/5)
+
+**Rotaciones (CÓMO):**
+- Estilo: ${config.d4.states[cfg.d4 - 1]} (${cfg.d4}/5)
+- Lógica: ${config.d5.states[cfg.d5 - 1]} (${cfg.d5}/5)
+- Rigor: ${config.d6.states[cfg.d6 - 1]} (${cfg.d6}/5)`;
+
+      } else if (currentExportFormat === 'gemini') {
+        output = `# Google Gemini - System Instructions
+# Copiá esto en "System instructions" de tu Gem
+
+Sos un agente especializado con este perfil:
+
+${agent.role}
+
+${agent.context ? `Contexto adicional:\n${agent.context}\n\n` : ''}
+Metodología de trabajo (6DoF):
+
+TRASLACIONES (qué hacer):
+• Alcance: ${config.d1.states[cfg.d1 - 1]} (nivel ${cfg.d1}/5)
+• Profundidad: ${config.d2.states[cfg.d2 - 1]} (nivel ${cfg.d2}/5)
+• Formato: ${config.d3.states[cfg.d3 - 1]} (nivel ${cfg.d3}/5)
+
+ROTACIONES (cómo hacerlo):
+• Estilo: ${config.d4.states[cfg.d4 - 1]} (nivel ${cfg.d4}/5)
+• Lógica: ${config.d5.states[cfg.d5 - 1]} (nivel ${cfg.d5}/5)
+• Rigor: ${config.d6.states[cfg.d6 - 1]} (nivel ${cfg.d6}/5)
+
+Aplicá estrictamente estos parámetros en cada respuesta.`;
+
+      } else if (currentExportFormat === 'universal') {
+        output = `# System Prompt Universal - ${agent.name}
+# Compatible con cualquier LLM
+
+You are a specialized AI agent configured with the following parameters:
+
+## Role Definition
+${agent.role}
+
+${agent.context ? `## Additional Context\n${agent.context}\n` : ''}
+## 6DoF Configuration (Operating Parameters)
+
+### TRANSLATIONS - WHAT to work on
+- **T1 - Scope:** ${config.d1.states[cfg.d1 - 1]} (${cfg.d1}/5)
+- **T2 - Depth:** ${config.d2.states[cfg.d2 - 1]} (${cfg.d2}/5)
+- **T3 - Format:** ${config.d3.states[cfg.d3 - 1]} (${cfg.d3}/5)
+
+### ROTATIONS - HOW to work
+- **R1 - Style:** ${config.d4.states[cfg.d4 - 1]} (${cfg.d4}/5)
+- **R2 - Logic:** ${config.d5.states[cfg.d5 - 1]} (${cfg.d5}/5)
+- **R3 - Rigor:** ${config.d6.states[cfg.d6 - 1]} (${cfg.d6}/5)
+
+## Operating Instructions
+1. Apply all 6DoF parameters consistently in every response
+2. Maintain your role and expertise boundaries
+3. Use provided context to inform your answers
+4. Be explicit when something is outside your expertise
+
+---
+Configuration generated by 6DoF Agent Builder v4.0`;
+      }
+
+      document.getElementById('export-output').textContent = output;
+    }
+
+    function copyExport() {
+      const content = document.getElementById('export-output').textContent;
+      navigator.clipboard.writeText(content);
+      alert('✅ Configuración copiada al portapapeles');
+    }
+
+    function downloadExport() {
+      const content = document.getElementById('export-output').textContent;
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${currentAgent.name.replace(/\s+/g, '_')}_${currentExportFormat}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      alert('✅ Archivo descargado');
+    }
+
+    // Preset card click handlers
+    document.querySelectorAll('.preset-card').forEach(card => {
+      card.addEventListener('click', function() {
+        const presetId = this.getAttribute('data-preset');
+        loadPreset(presetId);
+      });
+    });
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', () => {
+      initChart();
+      validateCoherence();
+      ['d1', 'd2', 'd3', 'd4', 'd5', 'd6'].forEach(updateAxis);
+      loadAgents();
+      update6DoFSummary();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>6DoF Workflow Builder - AI Automation Platform</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #020617;
+      --secondary: #0f172a;
+      --accent: #38bdf8;
+      --accent2: #22c55e;
+      --text: #e5e7eb;
+      --text-dim: #9ca3af;
+      --border: #1f293b;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--primary);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    /* Hero Section */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(ellipse at top, #1e3a8a 0%, var(--primary) 50%);
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      width: 150%;
+      height: 150%;
+      background: radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.1) 0%, transparent 50%);
+      animation: pulse 8s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      max-width: 1200px;
+      padding: 40px 20px;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      padding: 8px 16px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid var(--accent);
+      border-radius: 20px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 24px;
+      animation: fadeInDown 0.8s ease-out;
+    }
+
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero h1 {
+      font-size: clamp(32px, 6vw, 72px);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: fadeInUp 1s ease-out 0.2s both;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero-subtitle {
+      font-size: clamp(16px, 2vw, 24px);
+      color: var(--text-dim);
+      max-width: 800px;
+      margin: 0 auto 40px;
+      line-height: 1.6;
+      animation: fadeInUp 1s ease-out 0.4s both;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      animation: fadeInUp 1s ease-out 0.6s both;
+    }
+
+    .btn {
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: var(--primary);
+      box-shadow: 0 8px 24px rgba(56, 189, 248, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(56, 189, 248, 0.5);
+    }
+
+    .btn-secondary {
+      background: rgba(56, 189, 248, 0.1);
+      color: var(--accent);
+      border: 2px solid var(--accent);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(56, 189, 248, 0.2);
+      transform: translateY(-2px);
+    }
+
+    /* Features Section */
+    .features {
+      padding: 120px 20px;
+      background: var(--primary);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 80px;
+    }
+
+    .section-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid var(--accent2);
+      border-radius: 16px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent2);
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: clamp(28px, 4vw, 48px);
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .section-subtitle {
+      font-size: 18px;
+      color: var(--text-dim);
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 32px;
+    }
+
+    .feature-card {
+      padding: 32px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-8px);
+      border-color: var(--accent);
+      box-shadow: 0 16px 48px rgba(56, 189, 248, 0.2);
+    }
+
+    .feature-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .feature-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .feature-desc {
+      font-size: 14px;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    /* Builder Section */
+    .builder-section {
+      padding: 80px 20px;
+      background: radial-gradient(ellipse at center, #1e293b 0%, var(--primary) 70%);
+    }
+
+    .builder-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 32px;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+
+    .tab {
+      padding: 12px 24px;
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.3s;
+      white-space: nowrap;
+    }
+
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab:hover {
+      color: var(--text);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Recommendations Panel */
+    .rec-panel {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(10px);
+    }
+
+    .rec-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .rec-title {
+      font-size: 18px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .rec-detection {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .rec-label {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .rec-value {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .rec-confidence {
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      text-transform: uppercase;
+    }
+
+    .rec-confidence.high {
+      background: rgba(34, 197, 94, 0.2);
+      color: var(--accent2);
+    }
+
+    .rec-confidence.low {
+      background: rgba(245, 158, 11, 0.2);
+      color: var(--warning);
+    }
+
+    .rec-progress-container {
+      margin-bottom: 20px;
+    }
+
+    .rec-progress-bar {
+      width: 100%;
+      height: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+
+    .rec-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width 0.5s ease;
+    }
+
+    .rec-score {
+      text-align: right;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .rec-issue {
+      padding: 12px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+      border-left: 4px solid;
+      font-size: 13px;
+    }
+
+    .rec-issue.critical {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .rec-issue.warning {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: var(--warning);
+      color: var(--warning);
+    }
+
+    .rec-issue.info {
+      background: rgba(56, 189, 248, 0.1);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .rec-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Builder Grid */
+    .builder-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .panel {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      backdrop-filter: blur(10px);
+    }
+
+    .panel-title {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+
+    /* Sliders */
+    .axis-control {
+      margin-bottom: 24px;
+    }
+
+    .axis-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .axis-title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .axis-tag {
+      font-size: 9px;
+      padding: 3px 6px;
+      background: rgba(56, 189, 248, 0.15);
+      border-radius: 4px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .axis-name {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .axis-status {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-left: 4px;
+    }
+
+    .axis-status.optimal {
+      background: var(--accent2);
+      box-shadow: 0 0 8px var(--accent2);
+    }
+
+    .axis-status.close {
+      background: var(--warning);
+    }
+
+    .axis-status.far {
+      background: var(--danger);
+    }
+
+    .axis-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .axis-poles {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      background: var(--accent);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      background: var(--accent);
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+    }
+
+    .axis-state {
+      font-size: 12px;
+      color: var(--text);
+      margin-top: 8px;
+      text-align: center;
+      padding: 4px;
+      background: rgba(56, 189, 248, 0.1);
+      border-radius: 6px;
+    }
+
+    /* Chart */
+    #radarChart {
+      max-width: 100%;
+      height: auto !important;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(2, 6, 23, 0.95);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      max-width: 800px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 32px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .modal-title {
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 32px;
+      color: var(--text-dim);
+      cursor: pointer;
+      line-height: 1;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+    }
+
+    .modal-close:hover {
+      color: var(--text);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .hint {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .btn-full {
+      flex: 1;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.3s;
+    }
+
+    .btn-save {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: var(--primary);
+    }
+
+    .btn-cancel {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+
+    /* Export Output */
+    #export-output {
+      background: rgba(0, 0, 0, 0.5);
+      padding: 16px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+      margin: 16px 0;
+    }
+
+    .export-options {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .export-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .export-option:hover {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.05);
+    }
+
+    .export-option.selected {
+      border-color: var(--accent2);
+      background: rgba(34, 197, 94, 0.1);
+    }
+
+    .export-icon {
+      font-size: 24px;
+    }
+
+    .export-name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .export-desc {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    /* Workflow Preview */
+    .workflow-preview {
+      margin-top: 20px;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+    }
+
+    .workflow-node {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+
+    .workflow-node-icon {
+      font-size: 20px;
+      margin-right: 12px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero h1 {
+        font-size: 36px;
+      }
+
+      .builder-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .tabs {
+        flex-wrap: nowrap;
+        overflow-x: scroll;
+      }
+
+      .rec-detection {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Scroll Behavior */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /* Navbar */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 20px;
+      background: rgba(2, 6, 23, 0.8);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      transition: all 0.3s;
+    }
+
+    .navbar.scrolled {
+      padding: 12px 20px;
+      background: rgba(2, 6, 23, 0.95);
+    }
+
+    .nav-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-logo {
+      font-size: 20px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .nav-link {
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.3s;
+    }
+
+    .nav-link:hover {
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <div class="nav-logo">6DoF Workflow Builder</div>
+      <div class="nav-links">
+        <a href="#hero" class="nav-link">Inicio</a>
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#builder" class="nav-link">Builder</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero" id="hero">
+    <div class="hero-content">
+      <div class="hero-badge">⚡ Powered by AI • n8n • Make</div>
+      <h1>Automatización Inteligente<br>con IA de Nueva Generación</h1>
+      <p class="hero-subtitle">
+        Transforma configuraciones 6DoF en workflows ejecutables. 
+        Genera automatizaciones completas para n8n y Make con recomendaciones inteligentes.
+      </p>
+      <div class="hero-cta">
+        <a href="#builder" class="btn btn-primary">🚀 Empezar Ahora</a>
+        <button class="btn btn-secondary" onclick="showDemoModal()">📺 Ver Demo</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-badge">✨ Características</span>
+        <h2 class="section-title">Todo lo que necesitás para automatizar</h2>
+        <p class="section-subtitle">
+          Un sistema completo que combina configuración 6DoF, recomendaciones inteligentes y generación automática de workflows.
+        </p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <span class="feature-icon">🎯</span>
+          <h3 class="feature-title">Recomendaciones Inteligentes</h3>
+          <p class="feature-desc">
+            Sistema AI que detecta tu rol automáticamente y sugiere la configuración 6DoF óptima con validaciones en tiempo real.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon">⚙️</span>
+          <h3 class="feature-title">Generación Dinámica</h3>
+          <p class="feature-desc">
+            Motor que traduce tu configuración 6DoF en workflows JSON completos listos para importar en n8n o Make.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon">📊</span>
+          <h3 class="feature-title">6 Dimensiones de Control</h3>
+          <p class="feature-desc">
+            Alcance, Profundidad, Formato, Estilo, Lógica y Rigor. Cada dimensión controla aspectos específicos del workflow.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon">🔄</span>
+          <h3 class="feature-title">Múltiples Plataformas</h3>
+          <p class="feature-desc">
+            Exportá para n8n, Make, CustomGPT, Claude Projects y Gemini. Un solo agente, múltiples formatos.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon">⚡</span>
+          <h3 class="feature-title">Quick Fix Automático</h3>
+          <p class="feature-desc">
+            Detecta configuraciones subóptimas y aplica ajustes automáticos basados en mejores prácticas.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <span class="feature-icon">📚</span>
+          <h3 class="feature-title">Biblioteca de Templates</h3>
+          <p class="feature-desc">
+            Workflows predefinidos: Document Processor, Content Pipeline, Email Triage, Data Analysis y más.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Builder Section -->
+  <section class="builder-section" id="builder">
+    <div class="builder-container">
+      <div class="section-header">
+        <span class="section-badge">🛠️ Herramienta</span>
+        <h2 class="section-title">6DoF Workflow Builder</h2>
+        <p class="section-subtitle">Configurá tu agente, recibí recomendaciones y generá workflows</p>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('config')">⚙️ Configuración</button>
+        <button class="tab" onclick="switchTab('recommendations')">💡 Recomendaciones</button>
+        <button class="tab" onclick="switchTab('preview')">👁️ Preview</button>
+      </div>
+
+      <!-- Tab: Configuration -->
+      <div id="tab-config" class="tab-content active">
+        
+        <!-- Agent Info -->
+        <div class="panel" style="margin-bottom: 24px;">
+          <div class="panel-title">Información del Agente</div>
+          <div class="form-group">
+            <label>Nombre del Agente</label>
+            <input type="text" id="agent-name-quick" placeholder="Ej: Analista Financiero Facimex">
+          </div>
+          <div class="form-group">
+            <label>Descripción del Rol</label>
+            <textarea id="agent-role-quick" placeholder="Ej: Especialista en análisis crediticio para el mercado argentino..."></textarea>
+          </div>
+          <button class="btn btn-secondary" style="margin-top: 12px;" onclick="updateRecommendations()">🔄 Actualizar Recomendaciones</button>
+        </div>
+
+        <!-- 6DoF Sliders -->
+        <div class="builder-grid">
+          <!-- Traslaciones -->
+          <div class="panel">
+            <div class="panel-title">Traslaciones (QUÉ)</div>
+            
+            <div class="axis-control">
+              <div class="axis-header">
+                <div class="axis-title-group">
+                  <div class="axis-tag">T1</div>
+                  <div class="axis-name">Alcance</div>
+                  <span class="axis-status" id="d1-status"></span>
+                </div>
+                <div class="axis-value" id="d1-value">3/5</div>
+              </div>
+              <div class="axis-poles">
+                <span>Focal</span>
+                <span>Expansivo</span>
+              </div>
+              <input type="range" id="d1" min="1" max="5" value="3" oninput="updateAxis('d1')">
+              <div class="axis-state" id="d1-state">Amplio</div>
+            </div>
+
+            <div class="axis-control">
+              <div class="axis-header">
+                <div class="axis-title-group">
+                  <div class="axis-tag">T2</div>
+                  <div class="axis-name">Profundidad</div>
+                  <span class="axis-status" id="d2-status"></span>
+                </div>
+                <div class="axis-value" id="d2-value">3/5</div>
+              </div>
+              <div class="axis-poles">
+                <span>Superficial</span>
+                <span>Exhaustivo</span>
+              </div>
+              <input type="range" id="d2" min="1" max="5" value="3" oninput="updateAxis('d2')">
+              <div class="axis-state" id="d2-state">Balanceado</div>
+            </div>
+
+            <div class="axis-control">
+              <div class="axis-header">
+                <div class="axis-title-group">
+                  <div class="axis-tag">T3</div>
+                  <div class="axis-name">Formato</div>
+                  <span class="axis-status" id="d3-status"></span>
+                </div>
+                <div class="axis-value" id="d3-value">3/5</div>
+              </div>
+              <div class="axis-poles">
+                <span>Fluido</span>
+                <span>Estructurado</span>
+              </div>
+              <input type="range" id="d3" min="1" max="5" value="3" oninput="updateAxis('d3')">
+              <div class="axis-state" id="d3-state">Organizado</div>
+            </div>
+          </div>
+
+          <!-- Rotaciones -->
+          <div class="panel">
+            <div class="panel-title">Rotaciones (CÓMO)</div>
+            
+            <div class="axis-control">
+              <div class="axis-header">
+                <div class="axis-title-group">
+                  <div class="axis-tag">R1</div>
+                  <div class="axis-name">Estilo</div>
+                  <span class="axis-status" id="d4-status"></span>
+                </div>
+                <div class="axis-value" id="d4-value">3/5</div>
+              </div>
+              <div class="axis-poles">
+                <span>Casual</span>
+                <span>Formal</span>
+              </div>
+              <input type="range" id="d4" min="1" max="5" value="3" oninput="updateAxis('d4')">
+              <div class="axis-state" id="d4-state">Profesional</div>
+            </div>
+
+            <div class="axis-control">
+              <div class="axis-header">
+                <div class="axis-title-group">
+                  <div class="axis-tag">R2</div>
+                  <div class="axis-name">Lógica</div>
+                  <span class="axis-status" id="d5-status"></span>
+                </div>
+                <div class="axis-value" id="d5-value">3/5</div>
+              </div>
+              <div class="axis-poles">
+                <span>Intuitivo</span>
+                <span>Analítico</span>
+              </div>
+              <input type="range" id="d5" min="1" max="5" value="3" oninput="updateAxis('d5')">
+              <div class="axis-state" id="d5-state">Equilibrado</div>
+            </div>
+
+            <div class="axis-control">
+              <div class="axis-header">
+                <div class="axis-title-group">
+                  <div class="axis-tag">R3</div>
+                  <div class="axis-name">Rigor</div>
+                  <span class="axis-status" id="d6-status"></span>
+                </div>
+                <div class="axis-value" id="d6-value">3/5</div>
+              </div>
+              <div class="axis-poles">
+                <span>Flexible</span>
+                <span>Exacto</span>
+              </div>
+              <input type="range" id="d6" min="1" max="5" value="3" oninput="updateAxis('d6')">
+              <div class="axis-state" id="d6-state">Preciso</div>
+            </div>
+          </div>
+
+          <!-- Visualization -->
+          <div class="panel">
+            <div class="panel-title">Visualización 6DoF</div>
+            <canvas id="radarChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div style="display: flex; gap: 12px; margin-top: 24px;">
+          <button class="btn btn-primary" onclick="openExportModal()">📤 Exportar</button>
+          <button class="btn btn-secondary" onclick="saveAgent()">💾 Guardar Agente</button>
+        </div>
+      </div>
+
+      <!-- Tab: Recommendations -->
+      <div id="tab-recommendations" class="tab-content">
+        <div class="rec-panel">
+          <div class="rec-header">
+            <div class="rec-title">💡 Análisis Inteligente</div>
+            <button class="btn btn-secondary" onclick="updateRecommendations()">🔄 Actualizar</button>
+          </div>
+
+          <div class="rec-detection">
+            <div class="rec-label">Rol detectado:</div>
+            <div class="rec-value" id="detected-role">-</div>
+            <div class="rec-confidence" id="role-confidence">-</div>
+          </div>
+
+          <div class="rec-progress-container">
+            <div class="rec-label">Alineación con mejores prácticas:</div>
+            <div class="rec-progress-bar">
+              <div class="rec-progress-fill" id="alignment-progress" style="width: 0%"></div>
+            </div>
+            <div class="rec-score" id="alignment-score">0%</div>
+          </div>
+
+          <div id="rec-issues" style="margin: 20px 0;">
+            <div class="rec-issue info">
+              <div style="font-weight: 600; margin-bottom: 4px;">ℹ️ Ingresá información del agente</div>
+              <div>Completá el nombre y rol arriba para recibir recomendaciones personalizadas.</div>
+            </div>
+          </div>
+
+          <div class="rec-actions">
+            <button class="btn btn-primary" onclick="applyQuickFix()">⚡ Aplicar Quick Fix</button>
+            <button class="btn btn-secondary" onclick="showDimensionExplanations()">📚 Explicaciones</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Preview -->
+      <div id="tab-preview" class="tab-content">
+        <div class="panel">
+          <div class="panel-title">👁️ Preview de Configuración</div>
+          <div id="preview-content" style="padding: 20px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+            <p style="color: var(--text-dim); text-align: center;">Guardá un agente para ver el preview</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Export Modal -->
+  <div class="modal" id="export-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">📤 Exportar Configuración</div>
+        <button class="modal-close" onclick="closeExportModal()">×</button>
+      </div>
+
+      <div class="form-group">
+        <label>Tipo de Workflow</label>
+        <select id="workflow-type">
+          <option value="document-processor">📄 Document Processor</option>
+          <option value="content-pipeline">✍️ Content Pipeline</option>
+          <option value="email-triage">📧 Email Triage</option>
+          <option value="data-analysis">📊 Data Analysis</option>
+          <option value="customer-support">💬 Customer Support</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Formato de Exportación</label>
+        <div class="export-options">
+          <div class="export-option selected" data-format="n8n-workflow" onclick="selectExportFormat('n8n-workflow')">
+            <span class="export-icon">⚙️</span>
+            <div>
+              <div class="export-name">n8n Workflow</div>
+              <div class="export-desc">JSON listo para importar en n8n</div>
+            </div>
+          </div>
+          <div class="export-option" data-format="make-workflow" onclick="selectExportFormat('make-workflow')">
+            <span class="export-icon">🔄</span>
+            <div>
+              <div class="export-name">Make Scenario</div>
+              <div class="export-desc">JSON listo para importar en Make</div>
+            </div>
+          </div>
+          <div class="export-option" data-format="custom-gpt" onclick="selectExportFormat('custom-gpt')">
+            <span class="export-icon">🤖</span>
+            <div>
+              <div class="export-name">Custom GPT</div>
+              <div class="export-desc">System prompt para OpenAI</div>
+            </div>
+          </div>
+          <div class="export-option" data-format="claude-project" onclick="selectExportFormat('claude-project')">
+            <span class="export-icon">🧠</span>
+            <div>
+              <div class="export-name">Claude Project</div>
+              <div class="export-desc">Custom instructions para Anthropic</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="export-output"></div>
+
+      <div class="modal-actions">
+        <button class="btn-full btn-cancel" onclick="closeExportModal()">Cerrar</button>
+        <button class="btn-full btn-save" onclick="copyExport()">📋 Copiar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Configuration
+    const config = {
+      d1: { name: "Alcance", states: ["Focal", "Acotado", "Amplio", "Extenso", "Expansivo"] },
+      d2: { name: "Profundidad", states: ["Superficial", "Ligero", "Balanceado", "Profundo", "Exhaustivo"] },
+      d3: { name: "Formato", states: ["Fluido", "Flexible", "Organizado", "Estructurado", "Formal"] },
+      d4: { name: "Estilo", states: ["Casual", "Amigable", "Profesional", "Corporativo", "Formal"] },
+      d5: { name: "Lógica", states: ["Intuitivo", "Narrativo", "Equilibrado", "Razonado", "Analítico"] },
+      d6: { name: "Rigor", states: ["Flexible", "Adaptable", "Preciso", "Estricto", "Exacto"] }
+    };
+
+    let radarChart;
+    let currentAgent = null;
+    let currentExportFormat = 'n8n-workflow';
+    let currentRecommendation = null;
+
+    // Initialize Chart
+    function initChart() {
+      const ctx = document.getElementById('radarChart').getContext('2d');
+      radarChart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: ['T1: Alcance', 'T2: Profundidad', 'T3: Formato', 'R1: Estilo', 'R2: Lógica', 'R3: Rigor'],
+          datasets: [{
+            label: 'Configuración',
+            data: [3, 3, 3, 3, 3, 3],
+            borderColor: 'rgba(56, 189, 248, 1)',
+            backgroundColor: 'rgba(56, 189, 248, 0.2)',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          scales: {
+            r: {
+              min: 0,
+              max: 5,
+              ticks: { stepSize: 1, color: '#9ca3af', backdropColor: 'transparent' },
+              grid: { color: '#1f293b' },
+              pointLabels: { color: '#e5e7eb', font: { size: 11 } },
+              angleLines: { color: '#1f293b' }
+            }
+          },
+          plugins: { legend: { display: false } },
+          maintainAspectRatio: true,
+          responsive: true
+        }
+      });
+    }
+
+    function updateChart() {
+      const values = ['d1', 'd2', 'd3', 'd4', 'd5', 'd6'].map(id => 
+        parseInt(document.getElementById(id).value)
+      );
+      radarChart.data.datasets[0].data = values;
+      radarChart.update();
+    }
+
+    function updateAxis(id) {
+      const value = parseInt(document.getElementById(id).value);
+      const idx = value - 1;
+      
+      document.getElementById(`${id}-value`).textContent = `${value}/5`;
+      document.getElementById(`${id}-state`).textContent = config[id].states[idx];
+      
+      updateChart();
+      updateRecommendations();
+    }
+
+    // Tabs
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      event.target.classList.add('active');
+      document.getElementById('tab-' + tabName).classList.add('active');
+    }
+
+    // Recommendations System (Simplified)
+    function updateRecommendations() {
+      const role = document.getElementById('agent-role-quick').value || '';
+      
+      if (!role) {
+        document.getElementById('detected-role').textContent = 'Sin información';
+        document.getElementById('role-confidence').textContent = '';
+        document.getElementById('alignment-progress').style.width = '0%';
+        document.getElementById('alignment-score').textContent = '0%';
+        return;
+      }
+
+      // Simple role detection
+      let detectedRole = 'Profesional Genérico';
+      let confidence = 'low';
+      
+      const roleText = role.toLowerCase();
+      if (roleText.includes('financiero') || roleText.includes('analista') || roleText.includes('crediti')) {
+        detectedRole = 'Analista Financiero';
+        confidence = 'high';
+      } else if (roleText.includes('contenido') || roleText.includes('content') || roleText.includes('marketing')) {
+        detectedRole = 'Content Creator';
+        confidence = 'high';
+      } else if (roleText.includes('asistente') || roleText.includes('assistant')) {
+        detectedRole = 'Asistente Ejecutivo';
+        confidence = 'high';
+      }
+
+      document.getElementById('detected-role').textContent = detectedRole;
+      const confBadge = document.getElementById('role-confidence');
+      confBadge.textContent = confidence === 'high' ? 'Alta confianza' : 'Baja confianza';
+      confBadge.className = `rec-confidence ${confidence}`;
+
+      // Calculate alignment score (simplified)
+      const values = {
+        d1: parseInt(document.getElementById('d1').value),
+        d2: parseInt(document.getElementById('d2').value),
+        d3: parseInt(document.getElementById('d3').value),
+        d4: parseInt(document.getElementById('d4').value),
+        d5: parseInt(document.getElementById('d5').value),
+        d6: parseInt(document.getElementById('d6').value)
+      };
+
+      // Optimal configs per role (simplified)
+      const optimal = {
+        'Analista Financiero': { d1: 4, d2: 5, d3: 4, d4: 4, d5: 5, d6: 5 },
+        'Content Creator': { d1: 4, d2: 3, d3: 3, d4: 2, d5: 2, d6: 2 },
+        'Asistente Ejecutivo': { d1: 3, d2: 2, d3: 3, d4: 3, d5: 3, d6: 3 },
+        'Profesional Genérico': { d1: 3, d2: 3, d3: 3, d4: 3, d5: 3, d6: 3 }
+      };
+
+      const targetConfig = optimal[detectedRole];
+      let totalDiff = 0;
+      
+      ['d1', 'd2', 'd3', 'd4', 'd5', 'd6'].forEach(dim => {
+        const diff = Math.abs(values[dim] - targetConfig[dim]);
+        totalDiff += diff;
+        
+        const status = diff === 0 ? 'optimal' : diff === 1 ? 'close' : 'far';
+        const badge = document.getElementById(`${dim}-status`);
+        if (badge) {
+          badge.className = `axis-status ${status}`;
+        }
+      });
+
+      const alignmentScore = Math.max(0, 100 - (totalDiff * 5));
+      document.getElementById('alignment-progress').style.width = alignmentScore + '%';
+      document.getElementById('alignment-score').textContent = Math.round(alignmentScore) + '%';
+
+      // Update issues
+      updateIssues(values, alignmentScore);
+    }
+
+    function updateIssues(values, score) {
+      const issuesContainer = document.getElementById('rec-issues');
+      issuesContainer.innerHTML = '';
+
+      // Check for critical issues
+      if (values.d2 >= 5 && values.d6 <= 2) {
+        issuesContainer.innerHTML += `
+          <div class="rec-issue critical">
+            <div style="font-weight: 600; margin-bottom: 4px;">🚨 CRÍTICO</div>
+            <div>Análisis EXHAUSTIVO con Rigor FLEXIBLE. Un análisis profundo sin validación puede generar conclusiones erróneas.</div>
+          </div>
+        `;
+      }
+
+      // Check for warnings
+      if (values.d1 <= 2 && values.d2 >= 4) {
+        issuesContainer.innerHTML += `
+          <div class="rec-issue warning">
+            <div style="font-weight: 600; margin-bottom: 4px;">⚠️ Advertencia</div>
+            <div>Alcance FOCAL con Profundidad PROFUNDA. Considerá ampliar el alcance para un análisis más completo.</div>
+          </div>
+        `;
+      }
+
+      if (score >= 90) {
+        issuesContainer.innerHTML = `
+          <div class="rec-issue info">
+            <div style="font-weight: 600; margin-bottom: 4px;">✅ Excelente</div>
+            <div>Tu configuración está perfectamente alineada con las mejores prácticas.</div>
+          </div>
+        `;
+      } else if (issuesContainer.innerHTML === '') {
+        issuesContainer.innerHTML = `
+          <div class="rec-issue info">
+            <div style="font-weight: 600; margin-bottom: 4px;">✓ Configuración Válida</div>
+            <div>No se detectaron problemas críticos. Score: ${Math.round(score)}%</div>
+          </div>
+        `;
+      }
+    }
+
+    function applyQuickFix() {
+      const role = document.getElementById('agent-role-quick').value;
+      if (!role) {
+        alert('⚠️ Primero ingresá la información del agente');
+        return;
+      }
+
+      // Apply optimal config based on detected role
+      let optimal = { d1: 3, d2: 3, d3: 3, d4: 3, d5: 3, d6: 3 };
+      
+      const roleText = role.toLowerCase();
+      if (roleText.includes('financiero')) {
+        optimal = { d1: 4, d2: 5, d3: 4, d4: 4, d5: 5, d6: 5 };
+      } else if (roleText.includes('contenido') || roleText.includes('content')) {
+        optimal = { d1: 4, d2: 3, d3: 3, d4: 2, d5: 2, d6: 2 };
+      }
+
+      Object.keys(optimal).forEach(dim => {
+        document.getElementById(dim).value = optimal[dim];
+        updateAxis(dim);
+      });
+
+      alert('✅ Quick Fix aplicado! Se ajustó la configuración a valores óptimos.');
+    }
+
+    function showDimensionExplanations() {
+      alert('📚 Las explicaciones detalladas están disponibles en la versión completa del sistema.\n\nCada dimensión controla:\n\nD1 (Alcance): Cantidad de fuentes de datos\nD2 (Profundidad): Niveles de análisis\nD3 (Formato): Estructura del output\nD4 (Estilo): Tono de comunicación\nD5 (Lógica): Complejidad de decisiones\nD6 (Rigor): Nivel de validación');
+    }
+
+    // Export Functions
+    function openExportModal() {
+      const name = document.getElementById('agent-name-quick').value;
+      const role = document.getElementById('agent-role-quick').value;
+
+      if (!name || !role) {
+        alert('⚠️ Por favor completá el nombre y rol del agente');
+        return;
+      }
+
+      currentAgent = {
+        name: name,
+        role: role,
+        config: {
+          d1: parseInt(document.getElementById('d1').value),
+          d2: parseInt(document.getElementById('d2').value),
+          d3: parseInt(document.getElementById('d3').value),
+          d4: parseInt(document.getElementById('d4').value),
+          d5: parseInt(document.getElementById('d5').value),
+          d6: parseInt(document.getElementById('d6').value)
+        }
+      };
+
+      document.getElementById('export-modal').classList.add('active');
+      generateExport();
+    }
+
+    function closeExportModal() {
+      document.getElementById('export-modal').classList.remove('active');
+    }
+
+    function selectExportFormat(format) {
+      currentExportFormat = format;
+      document.querySelectorAll('.export-option').forEach(opt => {
+        opt.classList.remove('selected');
+      });
+      document.querySelector(`[data-format="${format}"]`).classList.add('selected');
+      generateExport();
+    }
+
+    function generateExport() {
+      if (!currentAgent) return;
+
+      const cfg = currentAgent.config;
+      let output = '';
+
+      if (currentExportFormat === 'n8n-workflow' || currentExportFormat === 'make-workflow') {
+        const workflowType = document.getElementById('workflow-type').value;
+        output = generateWorkflowJSON(currentAgent, workflowType, currentExportFormat === 'n8n-workflow' ? 'n8n' : 'make');
+      } else if (currentExportFormat === 'custom-gpt') {
+        output = `# Custom GPT Configuration
+
+## Rol
+${currentAgent.role}
+
+## Configuración 6DoF
+
+**TRASLACIONES (QUÉ):**
+- Alcance: ${config.d1.states[cfg.d1-1]} (${cfg.d1}/5)
+- Profundidad: ${config.d2.states[cfg.d2-1]} (${cfg.d2}/5)
+- Formato: ${config.d3.states[cfg.d3-1]} (${cfg.d3}/5)
+
+**ROTACIONES (CÓMO):**
+- Estilo: ${config.d4.states[cfg.d4-1]} (${cfg.d4}/5)
+- Lógica: ${config.d5.states[cfg.d5-1]} (${cfg.d5}/5)
+- Rigor: ${config.d6.states[cfg.d6-1]} (${cfg.d6}/5)
+
+## Instrucciones
+Aplicá siempre estos parámetros en tus respuestas.`;
+      } else if (currentExportFormat === 'claude-project') {
+        output = `${currentAgent.role}
+
+Configuración de Trabajo (6DoF):
+- Alcance: ${config.d1.states[cfg.d1-1]}
+- Profundidad: ${config.d2.states[cfg.d2-1]}
+- Formato: ${config.d3.states[cfg.d3-1]}
+- Estilo: ${config.d4.states[cfg.d4-1]}
+- Lógica: ${config.d5.states[cfg.d5-1]}
+- Rigor: ${config.d6.states[cfg.d6-1]}`;
+      }
+
+      document.getElementById('export-output').textContent = output;
+    }
+
+    function generateWorkflowJSON(agent, type, platform) {
+      // Simplified workflow generation
+      const workflow = {
+        name: `${agent.name}_${type}`,
+        platform: platform,
+        config_6dof: agent.config,
+        generated_at: new Date().toISOString(),
+        nodes: [
+          { id: 1, name: 'Trigger', type: 'webhook' },
+          { id: 2, name: 'Claude AI Analysis', type: 'ai' },
+          { id: 3, name: 'Process Results', type: 'code' },
+          { id: 4, name: 'Output', type: 'notification' }
+        ]
+      };
+
+      return JSON.stringify(workflow, null, 2);
+    }
+
+    function copyExport() {
+      const content = document.getElementById('export-output').textContent;
+      navigator.clipboard.writeText(content);
+      alert('✅ Contenido copiado al portapapeles');
+    }
+
+    function saveAgent() {
+      const name = document.getElementById('agent-name-quick').value;
+      const role = document.getElementById('agent-role-quick').value;
+
+      if (!name || !role) {
+        alert('⚠️ Por favor completá el nombre y rol del agente');
+        return;
+      }
+
+      alert('✅ Agente guardado correctamente!\n\nEn la versión completa, se guardará en localStorage y estará disponible en una librería de agentes.');
+    }
+
+    function showDemoModal() {
+      alert('📺 Demo\n\n1. Completá información del agente\n2. Ajustá los 6 sliders según tus necesidades\n3. Revisá las recomendaciones inteligentes\n4. Exportá como workflow para n8n/Make\n5. Importá el JSON en tu plataforma\n\n¡Listo para automatizar!');
+    }
+
+    // Navbar scroll effect
+    window.addEventListener('scroll', () => {
+      const navbar = document.getElementById('navbar');
+      if (window.scrollY > 50) {
+        navbar.classList.add('scrolled');
+      } else {
+        navbar.classList.remove('scrolled');
+      }
+    });
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      initChart();
+      ['d1', 'd2', 'd3', 'd4', 'd5', 'd6'].forEach(updateAxis);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adapteza 6DoF Canvas</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { background-color: #f8fafc; }
+        /* Ajustes finos para sliders */
+        input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #0f172a;
+            cursor: pointer;
+            margin-top: -6px; 
+            box-shadow: 0 0 2px rgba(0,0,0,0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // --- CONSTANTES & CONFIGURACIÓN ---
+        const STAGES = {
+          libre: {
+            name: "LIBRE",
+            color: "#10b981", // Emerald-500
+            freedoms: 6,
+            short: "Explorar",
+            description: (
+              <React.Fragment>
+                <strong className="text-emerald-700">Exploración total del espacio.</strong>
+                <p className="mt-1 text-slate-600">Se buscan oportunidades sin restricciones. Alto desplazamiento (X, Y, Z) y rotación libre para entender el entorno desde todos los ángulos.</p>
+              </React.Fragment>
+            ),
+          },
+          precision: {
+            name: "PRECISIÓN",
+            color: "#f59e0b", // Amber-500
+            freedoms: 3,
+            short: "Alinear",
+            description: (
+              <React.Fragment>
+                <strong className="text-amber-700">Alineación de coordenadas.</strong>
+                <p className="mt-1 text-slate-600">Se reducen los grados de libertad rotacionales. Se fija la orientación y se ajusta la posición para preparar el impacto.</p>
+              </React.Fragment>
+            ),
+          },
+          ejecucion: {
+            name: "EJECUCIÓN",
+            color: "#ef4444", // Red-500
+            freedoms: 1,
+            short: "Impactar",
+            description: (
+              <React.Fragment>
+                <strong className="text-red-700">Movimiento mínimo, impacto máximo.</strong>
+                <p className="mt-1 text-slate-600">Solo microajustes en el eje de avance (Z). La configuración está bloqueada para garantizar la entrega del output.</p>
+              </React.Fragment>
+            ),
+          },
+        };
+
+        const STAGE_ORDER = ["libre", "precision", "ejecucion"];
+
+        const AXES = [
+          { key: "x_desafios", axis: "X", label: "Desafíos", type: "range" },
+          { key: "y_habilidades", axis: "Y", label: "Habilidades", type: "range" },
+          { key: "z_iteracion", axis: "Z", label: "Iteración", type: "range" },
+          { key: "roll_enfoque", axis: "Roll", label: "Enfoque", type: "select" },
+          { key: "pitch_concrecion", axis: "Pitch", label: "Concreción", type: "select" },
+          { key: "yaw_intencion", axis: "Yaw", label: "Intención", type: "select" },
+        ];
+
+        const OPTIONS = {
+          roll_enfoque: [
+            { value: "estrategico", label: "Estratégico" },
+            { value: "creativo", label: "Creativo" },
+            { value: "tecnico", label: "Técnico" },
+            { value: "comercial", label: "Comercial" },
+            { value: "operativo", label: "Operativo" },
+          ],
+          pitch_concrecion: [
+            { value: "conceptual", label: "Conceptual" },
+            { value: "medio", label: "Modelo / MVP" },
+            { value: "accion", label: "Acción Directa" },
+          ],
+          yaw_intencion: [
+            { value: "explorar", label: "Explorar" },
+            { value: "resolver", label: "Resolver" },
+            { value: "convencer", label: "Convencer" },
+            { value: "optimizar", label: "Optimizar" },
+            { value: "ejecutar", label: "Ejecutar" },
+          ],
+          acceleration: [
+            { value: "baja", label: "Baja (Cuidadosa)" },
+            { value: "media", label: "Media (Sostenida)" },
+            { value: "alta", label: "Alta (Agresiva)" },
+          ],
+        };
+
+        // --- UTILS ---
+        function clamp(v, a, b) {
+          return Math.max(a, Math.min(b, v));
+        }
+
+        function axisInterpretation(key, value) {
+          if (key === "x_desafios") {
+            if (value < 30) return "Exploración amplia";
+            if (value > 70) return "Nicho específico";
+            return "Balanceado";
+          }
+          if (key === "y_habilidades") {
+            if (value < 30) return "Aprendizaje";
+            if (value > 70) return "Maestría";
+            return "Competente";
+          }
+          if (key === "z_iteracion") {
+            if (value < 30) return "Análisis";
+            if (value > 70) return "Velocidad";
+            return "Ritmo sostenido";
+          }
+          return "";
+        }
+
+        function activeAxesForStage(stageKey) {
+          const freedoms = STAGES[stageKey].freedoms;
+          const active = new Set();
+          AXES.forEach((a, idx) => {
+            if (idx < freedoms) active.add(a.key);
+          });
+          return active;
+        }
+
+        function mergeForView(event, stageKey) {
+          return {
+            proposito: event.meta.proposito,
+            recurso_humano: event.meta.recurso_humano,
+            agentes_ia: event.meta.agentes_ia,
+            output_final: event.ejecucion.output_final || event.meta.output_final || "",
+            ...event[stageKey],
+          };
+        }
+
+        // --- LOGICA JSON & EXPORT ---
+        function buildCanvasJSON({ event, stageKey }) {
+          const stage = STAGES[stageKey];
+          const view = mergeForView(event, stageKey);
+
+          const snap = (k) => ({
+            etapa: k,
+            nombre: STAGES[k].name,
+            dof_activos: STAGES[k].freedoms,
+            ejes: {
+              x_desafios: event[k].x_desafios,
+              y_habilidades: event[k].y_habilidades,
+              z_iteracion: event[k].z_iteracion,
+              acceleration: event[k].acceleration,
+              roll_enfoque: event[k].roll_enfoque,
+              pitch_concrecion: event[k].pitch_concrecion,
+              yaw_intencion: event[k].yaw_intencion,
+            },
+            notas: event[k].notas,
+            criterios: event[k].criterios,
+          });
+
+          return {
+            version: "1.2",
+            timestamp: new Date().toISOString(),
+            evento: {
+              id: event.meta.evento_id,
+              titulo: event.meta.titulo,
+              contexto: event.meta.contexto,
+              proposito: event.meta.proposito,
+              stage_actual: stageKey,
+            },
+            configuracion_actual: {
+              modo: stage.name,
+              libertad: `${stage.freedoms} DOF`,
+              ejes_activos: Array.from(activeAxesForStage(stageKey)),
+            },
+            recursos: {
+              controller: event.meta.recurso_humano,
+              factory: event.meta.agentes_ia,
+            },
+            output: {
+              end_effector: view.output_final,
+            },
+            lectura_tactica: {
+              desafio: axisInterpretation("x_desafios", view.x_desafios),
+              habilidad: axisInterpretation("y_habilidades", view.y_habilidades),
+              ritmo: axisInterpretation("z_iteracion", view.z_iteracion),
+            },
+            trazabilidad: {
+              libre: snap("libre"),
+              precision: snap("precision"),
+              ejecucion: snap("ejecucion"),
+            },
+          };
+        }
+
+        // --- HOOK DE DIBUJO (CANVAS) ---
+        function useCanvasDraw({ view, stageKey }) {
+          const canvasRef = useRef(null);
+
+          useEffect(() => {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return;
+
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = Math.round(rect.width * dpr);
+            canvas.height = Math.round(rect.height * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            // Fondo
+            ctx.clearRect(0, 0, rect.width, rect.height);
+            const bgGradient = ctx.createLinearGradient(0, 0, 0, rect.height);
+            bgGradient.addColorStop(0, "#0f172a"); 
+            bgGradient.addColorStop(1, "#1e293b"); 
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(0, 0, rect.width, rect.height);
+
+            // Grid
+            ctx.globalAlpha = 0.1;
+            ctx.strokeStyle = "#94a3b8";
+            ctx.lineWidth = 1;
+            const grid = 40;
+            for (let x = 0; x <= rect.width; x += grid) {
+              ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, rect.height); ctx.stroke();
+            }
+            for (let y = 0; y <= rect.height; y += grid) {
+              ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(rect.width, y); ctx.stroke();
+            }
+            ctx.globalAlpha = 1;
+
+            // Labels
+            ctx.fillStyle = "#64748b";
+            ctx.font = "10px monospace";
+            ctx.fillText("X: DESAFIOS ->", 10, rect.height - 10);
+            ctx.fillText("<- Y: HABILIDADES", 10, 15);
+            
+            // Posicionamiento
+            const stage = STAGES[stageKey];
+            const x = (view.x_desafios ?? 50) / 100;
+            const y = (view.y_habilidades ?? 50) / 100;
+            const z = (view.z_iteracion ?? 50) / 100;
+
+            const margin = 80;
+            const px = margin + x * (rect.width - margin * 2);
+            const py = (rect.height - margin) - y * (rect.height - margin * 2);
+
+            const accel = view.acceleration === "alta" ? 1.2 : view.acceleration === "media" ? 0.8 : 0.5;
+            const glowSize = 10 + z * 30;
+            
+            const yawDir = {
+              explorar: -90, resolver: -45, convencer: 0, optimizar: 45, ejecutar: 90,
+            }[view.yaw_intencion] ?? -90;
+
+            const angle = (yawDir * Math.PI) / 180;
+            const vecLen = 40 + z * 20;
+            const tx = px + Math.cos(angle) * vecLen;
+            const ty = py + Math.sin(angle) * vecLen;
+
+            // Trail
+            ctx.strokeStyle = stage.color;
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.3;
+            ctx.beginPath();
+            ctx.moveTo(px - Math.cos(angle) * (vecLen * accel), py - Math.sin(angle) * (vecLen * accel));
+            ctx.lineTo(px, py);
+            ctx.stroke();
+
+            // Vector
+            ctx.globalAlpha = 0.8;
+            ctx.setLineDash([2, 2]);
+            ctx.beginPath();
+            ctx.moveTo(px, py);
+            ctx.lineTo(tx, ty);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Glow
+            const grd = ctx.createRadialGradient(px, py, 2, px, py, glowSize);
+            grd.addColorStop(0, stage.color);
+            grd.addColorStop(1, "rgba(0,0,0,0)");
+            ctx.globalAlpha = 0.4;
+            ctx.fillStyle = grd;
+            ctx.beginPath();
+            ctx.arc(px, py, glowSize, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            // Dot
+            ctx.fillStyle = "#fff";
+            ctx.beginPath();
+            ctx.arc(px, py, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Rings
+            const ringCount = stage.freedoms >= 4 ? 3 : stage.freedoms >= 2 ? 2 : 1;
+            ctx.strokeStyle = stage.color;
+            ctx.lineWidth = 1.5;
+            for (let i = 1; i <= ringCount; i++) {
+              ctx.beginPath();
+              ctx.arc(px, py, 8 + i * 6, 0 + angle - 0.5, 0 + angle + 0.5);
+              ctx.stroke();
+            }
+
+            // Floating Text
+            ctx.fillStyle = "#e2e8f0";
+            ctx.font = "bold 11px system-ui";
+            ctx.fillText(`${axisInterpretation("x_desafios", view.x_desafios)}`, px + 15, py - 15);
+            ctx.fillStyle = "#94a3b8";
+            ctx.font = "10px system-ui";
+            ctx.fillText(`Z: ${Math.round(view.z_iteracion)}% (${view.acceleration})`, px + 15, py);
+            
+            // Badge
+            ctx.fillStyle = "rgba(15, 23, 42, 0.8)";
+            ctx.fillRect(rect.width - 160, 10, 150, 50);
+            ctx.strokeStyle = stage.color;
+            ctx.strokeRect(rect.width - 160, 10, 150, 50);
+            ctx.fillStyle = stage.color;
+            ctx.font = "bold 12px system-ui";
+            ctx.fillText(stage.name, rect.width - 150, 30);
+            ctx.fillStyle = "#cbd5e1";
+            ctx.font = "10px monospace";
+            ctx.fillText(`DOF: ${stage.freedoms}/6 ACTIVOS`, rect.width - 150, 45);
+
+          }, [view, stageKey]);
+
+          return canvasRef;
+        }
+
+        // --- COMPONENTES UI ---
+        function Card({ title, children, right, className = "" }) {
+          return (
+            <div className={`bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden ${className}`}>
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div className="text-sm font-bold text-slate-800 uppercase tracking-wide">{title}</div>
+                {right && <div>{right}</div>}
+              </div>
+              <div className="p-5">{children}</div>
+            </div>
+          );
+        }
+
+        function Label({ text, active = true }) {
+          return <div className={`text-xs font-semibold mb-1 ${active ? 'text-slate-700' : 'text-slate-400'}`}>{text}</div>
+        }
+
+        function TextInput({ label, value, onChange, placeholder }) {
+          return (
+            <div className="space-y-1">
+              <Label text={label} />
+              <input
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent transition"
+                value={value}
+                placeholder={placeholder}
+                onChange={(e) => onChange(e.target.value)}
+              />
+            </div>
+          );
+        }
+
+        function TextArea({ label, value, onChange, placeholder }) {
+          return (
+            <div className="space-y-1">
+              <Label text={label} />
+              <textarea
+                className="w-full min-h-[80px] rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent transition resize-none"
+                value={value}
+                placeholder={placeholder}
+                onChange={(e) => onChange(e.target.value)}
+              />
+            </div>
+          );
+        }
+
+        function Range({ label, value, onChange, disabled }) {
+          return (
+            <div className={`space-y-2 ${disabled ? "opacity-40 grayscale pointer-events-none" : ""}`}>
+              <div className="flex items-end justify-between">
+                <Label text={label} active={!disabled} />
+                <span className="text-xs font-mono text-slate-500">{value}%</span>
+              </div>
+              <input
+                type="range"
+                min={0} max={100} step={1}
+                value={value}
+                onChange={(e) => onChange(Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
+          );
+        }
+
+        function Select({ label, value, options, onChange, disabled }) {
+          return (
+            <div className={`space-y-1 ${disabled ? "opacity-40 pointer-events-none" : ""}`}>
+              <Label text={label} active={!disabled} />
+              <select
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                disabled={disabled}
+              >
+                {options.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+          );
+        }
+
+        function FreedomIndicator({ stageKey }) {
+          const activeCount = STAGES[stageKey].freedoms;
+          return (
+            <div className="grid grid-cols-3 gap-2">
+              {AXES.map((a, idx) => {
+                const isActive = idx < activeCount;
+                return (
+                  <div
+                    key={a.key}
+                    className={`
+                      relative rounded-lg px-3 py-2 border flex flex-col items-center justify-center text-center transition-all duration-300
+                      ${isActive 
+                        ? "bg-slate-800 border-slate-900 text-white shadow-md transform scale-100" 
+                        : "bg-slate-50 border-slate-200 text-slate-300 shadow-none scale-95"}
+                    `}
+                  >
+                    <div className="text-[10px] font-bold tracking-wider uppercase">{a.axis}</div>
+                    <div className="text-[10px] opacity-80 truncate w-full">{a.label}</div>
+                    {!isActive && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-slate-50/50 backdrop-blur-[1px] rounded-lg">
+                        <span className="text-xs text-slate-400">Locked</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        }
+
+        function Stepper({ stageKey, onJump }) {
+          return (
+            <div className="inline-flex bg-slate-100 p-1 rounded-xl shadow-inner">
+              {STAGE_ORDER.map((k, idx) => {
+                const s = STAGES[k];
+                const isActive = stageKey === k;
+                return (
+                  <button
+                    key={k}
+                    onClick={() => onJump(k)}
+                    className={`
+                      px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2
+                      ${isActive 
+                        ? "bg-white text-slate-900 shadow-sm ring-1 ring-black/5" 
+                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}
+                    `}
+                  >
+                    <div className={`w-2 h-2 rounded-full ${isActive ? '' : 'bg-slate-300'}`} style={{ backgroundColor: isActive ? s.color : undefined }} />
+                    <span>{s.short}</span>
+                  </button>
+                );
+              })}
+            </div>
+          );
+        }
+
+        // --- APP PRINCIPAL ---
+        function App() {
+          const [event, setEvent] = useState({
+            meta: {
+              evento_id: "EVT-2025-001",
+              titulo: "",
+              contexto: "",
+              proposito: "",
+              recurso_humano: "",
+              agentes_ia: "",
+              output_final: "",
+            },
+            libre: {
+              x_desafios: 50, y_habilidades: 50, z_iteracion: 50,
+              acceleration: "media", roll_enfoque: "estrategico", pitch_concrecion: "conceptual", yaw_intencion: "explorar",
+              notas: "", criterios: "",
+            },
+            precision: {
+              x_desafios: 50, y_habilidades: 50, z_iteracion: 50,
+              acceleration: "media", roll_enfoque: "estrategico", pitch_concrecion: "medio", yaw_intencion: "resolver",
+              notas: "", criterios: "",
+            },
+            ejecucion: {
+              x_desafios: 50, y_habilidades: 50, z_iteracion: 80,
+              acceleration: "alta", roll_enfoque: "operativo", pitch_concrecion: "accion", yaw_intencion: "ejecutar",
+              notas: "", criterios: "",
+              output_final: "",
+            },
+            stage: "libre",
+          });
+
+          const stageKey = event.stage;
+          const stage = STAGES[stageKey];
+          const activeAxes = useMemo(() => activeAxesForStage(stageKey), [stageKey]);
+          const view = useMemo(() => mergeForView(event, stageKey), [event, stageKey]);
+
+          const canvasRef = useCanvasDraw({ view, stageKey });
+
+          const canvasJSON = useMemo(() => buildCanvasJSON({ event, stageKey }), [event, stageKey]);
+          const jsonText = useMemo(() => JSON.stringify(canvasJSON, null, 2), [canvasJSON]);
+          const stageIndex = STAGE_ORDER.indexOf(stageKey);
+
+          const setMeta = (key, value) => setEvent((e) => ({ ...e, meta: { ...e.meta, [key]: value } }));
+          const setStageField = (stageK, key, value) => {
+            setEvent((e) => ({
+              ...e,
+              [stageK]: {
+                ...e[stageK],
+                [key]: typeof value === "number" ? clamp(value, 0, 100) : value,
+              },
+            }));
+          };
+          
+          const jumpStage = (next) => setEvent((e) => ({ ...e, stage: next }));
+          const nextStage = () => {
+            if (stageKey === "libre") return setEvent((e) => ({ ...e, precision: { ...e.precision, ...e.libre }, stage: "precision" }));
+            if (stageKey === "precision") return setEvent((e) => ({ ...e, ejecucion: { ...e.ejecucion, ...e.precision, output_final: e.ejecucion.output_final }, stage: "ejecucion" }));
+          };
+          const prevStage = () => {
+            const prev = STAGE_ORDER[stageIndex - 1];
+            if (prev) setEvent((e) => ({ ...e, stage: prev }));
+          };
+
+          const exportCopy = () => {
+            navigator.clipboard.writeText(jsonText);
+            alert("✅ Data 6DoF copiada al portapapeles");
+          };
+
+          const isDisabled = (key) => !activeAxes.has(key);
+
+          return (
+            <div className="min-h-screen bg-slate-50 text-slate-900 pb-20 font-sans">
+              <div className="max-w-7xl mx-auto px-4 py-8">
+                
+                <header className="mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="bg-slate-900 text-white text-xs font-bold px-2 py-1 rounded">V1.2</span>
+                      <h1 className="text-2xl font-bold tracking-tight text-slate-900">Adapteza 6DoF Canvas</h1>
+                    </div>
+                    <p className="text-slate-500 text-sm max-w-2xl">
+                      Instrumento para calibrar la versatilidad profesional. Define el vector de movimiento desde la exploración hasta la ejecución.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-3 items-end">
+                     <Stepper stageKey={stageKey} onJump={jumpStage} />
+                     <div className="flex gap-2">
+                        <button disabled={stageIndex === 0} onClick={prevStage} className="text-sm px-3 py-1 text-slate-500 hover:text-slate-800 disabled:opacity-30">← Anterior</button>
+                        <button disabled={stageIndex === 2} onClick={nextStage} className="text-sm px-4 py-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">Siguiente Etapa →</button>
+                     </div>
+                  </div>
+                </header>
+
+                <div className="grid lg:grid-cols-12 gap-8">
+                  
+                  <div className="lg:col-span-5 space-y-6">
+                    <Card title="Vector de Movimiento" className="ring-4 ring-slate-200/50">
+                      <div className="relative rounded-lg overflow-hidden border border-slate-800 shadow-2xl">
+                        <canvas ref={canvasRef} className="w-full bg-slate-900" style={{ aspectRatio: "4/3" }} />
+                      </div>
+                      <div className="mt-4 p-4 bg-slate-50 border border-slate-100 rounded-lg text-sm">
+                        {stage.description}
+                      </div>
+                    </Card>
+
+                    <Card title="Estado del Sistema">
+                       <FreedomIndicator stageKey={stageKey} />
+                       <div className="mt-4 text-xs text-slate-400 text-center">
+                         {stage.freedoms === 6 ? "Sistema totalmente desbloqueado" : stage.freedoms === 3 ? "Sistema restringido a traslación" : "Sistema bloqueado en trayectoria"}
+                       </div>
+                    </Card>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <button onClick={exportCopy} className="col-span-2 py-3 bg-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-300 transition text-sm">
+                        📋 Copiar JSON Completo
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-7 space-y-6">
+                    
+                    <Card title="Contexto de Misión">
+                      <div className="grid md:grid-cols-2 gap-4 mb-4">
+                         <div className="md:col-span-2">
+                            <TextInput label="Título del Evento" value={event.meta.titulo} onChange={(v) => setMeta("titulo", v)} placeholder="Ej: Lanzamiento Q3" />
+                         </div>
+                         <div className="md:col-span-2">
+                            <TextArea label="Contexto / Situación" value={event.meta.contexto} onChange={(v) => setMeta("contexto", v)} placeholder="Situación actual..." />
+                         </div>
+                         <TextInput label="Controller (Humano)" value={event.meta.recurso_humano} onChange={(v) => setMeta("recurso_humano", v)} placeholder="Quién lidera" />
+                         <TextInput label="Factory (IA)" value={event.meta.agentes_ia} onChange={(v) => setMeta("agentes_ia", v)} placeholder="Modelos / Agentes" />
+                      </div>
+                    </Card>
+
+                    <Card 
+                      title={`Configuración de Vuelo: ${stage.name}`} 
+                      right={<span className="text-xs font-mono text-slate-400">Modo: {isDisabled("roll_enfoque") ? "AUTO" : "MANUAL"}</span>}
+                    >
+                      <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
+                        
+                        <div className="space-y-6">
+                          <div className="pb-2 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase">Coordenadas</div>
+                          <Range label="X — Desafíos" value={event[stageKey].x_desafios} onChange={(v) => setStageField(stageKey, "x_desafios", v)} disabled={isDisabled("x_desafios")} />
+                          <Range label="Y — Habilidades" value={event[stageKey].y_habilidades} onChange={(v) => setStageField(stageKey, "y_habilidades", v)} disabled={isDisabled("y_habilidades")} />
+                          <Range label="Z — Iteración" value={event[stageKey].z_iteracion} onChange={(v) => setStageField(stageKey, "z_iteracion", v)} disabled={isDisabled("z_iteracion")} />
+                          <Select label="Aceleración (Z)" value={event[stageKey].acceleration} options={OPTIONS.acceleration} onChange={(v) => setStageField(stageKey, "acceleration", v)} disabled={isDisabled("z_iteracion")} />
+                        </div>
+
+                        <div className="space-y-6">
+                           <div className="pb-2 border-b border-slate-100 text-xs font-bold text-slate-400 uppercase">Orientación</div>
+                           <Select label="Roll — Enfoque" value={event[stageKey].roll_enfoque} options={OPTIONS.roll_enfoque} onChange={(v) => setStageField(stageKey, "roll_enfoque", v)} disabled={isDisabled("roll_enfoque")} />
+                           <Select label="Pitch — Concreción" value={event[stageKey].pitch_concrecion} options={OPTIONS.pitch_concrecion} onChange={(v) => setStageField(stageKey, "pitch_concrecion", v)} disabled={isDisabled("pitch_concrecion")} />
+                           <Select label="Yaw — Intención" value={event[stageKey].yaw_intencion} options={OPTIONS.yaw_intencion} onChange={(v) => setStageField(stageKey, "yaw_intencion", v)} disabled={isDisabled("yaw_intencion")} />
+                        </div>
+
+                        <div className="md:col-span-2 space-y-4 pt-4 border-t border-slate-100">
+                           <TextArea label="Notas de Bitácora" value={event[stageKey].notas} onChange={(v) => setStageField(stageKey, "notas", v)} placeholder="Observaciones clave..." />
+                           
+                           {stageKey === "ejecucion" && (
+                             <div className="bg-red-50 p-4 rounded-lg border border-red-100">
+                                <TextInput label="Output Final (End-Effector)" value={event.ejecucion.output_final} onChange={(v) => setStageField("ejecucion", "output_final", v)} placeholder="El entregable final tangible" />
+                             </div>
+                           )}
+                        </div>
+
+                      </div>
+                    </Card>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

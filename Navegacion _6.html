@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Telemetría 6DoF - Nave Cognitiva</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at top, #020617 0, #020617 40%, #020617 60%, #020617 100%);
+      color: #e5e7eb;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app {
+      max-width: 1040px;
+      width: 100%;
+      padding: 24px;
+      box-sizing: border-box;
+    }
+
+    h1 {
+      margin-top: 0;
+      margin-bottom: 4px;
+      font-size: 26px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #9ca3af;
+      margin-bottom: 20px;
+    }
+
+    .hud-line {
+      width: 100%;
+      height: 1px;
+      background-image: linear-gradient(to right, transparent, #38bdf8, transparent);
+      opacity: 0.6;
+      margin-bottom: 16px;
+    }
+
+    .panel-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, rgba(56,189,248,0.12), #020617 55%);
+      border-radius: 12px;
+      padding: 16px 16px 18px;
+      border: 1px solid #1f293b;
+      box-shadow: 0 14px 32px rgba(0,0,0,0.45);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      border: 1px solid rgba(148,163,184,0.18);
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    .card h2 {
+      font-size: 15px;
+      margin: 0 0 6px;
+      color: #e5e7eb;
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid #4b5563;
+      color: #9ca3af;
+      margin-bottom: 6px;
+      background: rgba(15,23,42,0.8);
+    }
+
+    .poles {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #9ca3af;
+      margin-bottom: 6px;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 4px;
+      background: #020617;
+      outline: none;
+      box-shadow: inset 0 0 0 1px #1f2937;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #38bdf8;
+      cursor: pointer;
+      border: 2px solid #0f172a;
+      box-shadow: 0 0 0 5px rgba(56,189,248,0.3);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #38bdf8;
+      cursor: pointer;
+      border: 2px solid #0f172a;
+      box-shadow: 0 0 0 5px rgba(56,189,248,0.3);
+    }
+
+    .slider-value {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #020617;
+      border: 1px solid #374151;
+      white-space: nowrap;
+    }
+
+    .current-label {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #e5e7eb;
+    }
+
+    .current-label span {
+      color: #38bdf8;
+      font-weight: 500;
+    }
+
+    .section-title {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: #9ca3af;
+      margin: 18px 0 8px;
+    }
+
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      background: #020617;
+      border-radius: 10px;
+      border: 1px solid #1f2937;
+      color: #e5e7eb;
+      padding: 10px 12px;
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    textarea:focus {
+      outline: 1px solid #38bdf8;
+      border-color: #38bdf8;
+    }
+
+    .dock-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 16px 0;
+      flex-wrap: wrap;
+    }
+
+    .dock-row small {
+      font-size: 11px;
+      color: #9ca3af;
+      max-width: 520px;
+    }
+
+    button {
+      padding: 9px 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(15,23,42,0.8);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: radial-gradient(circle at top left, #38bdf8, #22c55e);
+      color: #020617;
+      box-shadow: 0 12px 26px rgba(56,189,248,0.38);
+    }
+
+    button span.icon {
+      font-size: 14px;
+    }
+
+    button:active {
+      transform: translateY(1px);
+      box-shadow: 0 5px 16px rgba(56,189,248,0.38);
+    }
+
+    #output-json,
+    #output-prompt {
+      min-height: 140px;
+      white-space: pre;
+    }
+
+    .hint {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 6px;
+    }
+
+    @media (max-width: 600px) {
+      .panel-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>Telemetría 6DoF - Nave Cognitiva</h1>
+    <div class="subtitle">
+      Configurá los ejes de navegación. Escribí una instrucción mínima. Tocá <strong>Dock</strong>. Vas a obtener un JSON y un pre prompt para pegar en cualquier IA.
+    </div>
+    <div class="hud-line"></div>
+
+    <div class="section-title">Traslaciones - Rumbo y entrega</div>
+    <div class="panel-grid">
+      <!-- T1 CONTROL DE VECTOR DE MISIÓN -->
+      <div class="card">
+        <div class="tag">T1 · Vector de misión</div>
+        <h2>Control de vector de misión</h2>
+        <div class="poles">
+          <span>Exploración</span>
+          <span>Resolución</span>
+        </div>
+        <div class="slider-row">
+          <input id="t1" type="range" min="1" max="5" step="1" value="3" />
+          <div class="slider-value" id="t1-value">3/5</div>
+        </div>
+        <div class="current-label">Estado: <span id="t1-label">Equilibrio de Rumbo</span></div>
+      </div>
+
+      <!-- T2 SISTEMA DE ALTITUD CONTEXTUAL -->
+      <div class="card">
+        <div class="tag">T2 · Altitud contextual</div>
+        <h2>Sistema de altitud contextual</h2>
+        <div class="poles">
+          <span>Órbita conceptual</span>
+          <span>Superficie operativa</span>
+        </div>
+        <div class="slider-row">
+          <input id="t2" type="range" min="1" max="5" step="1" value="3" />
+          <div class="slider-value" id="t2-value">3/5</div>
+        </div>
+        <div class="current-label">Estado: <span id="t2-label">Altitud Media Estable</span></div>
+      </div>
+
+      <!-- T3 CONFIGURADOR DE MODO DE ENTREGA -->
+      <div class="card">
+        <div class="tag">T3 · Modo de entrega</div>
+        <h2>Configurador de modo de entrega</h2>
+        <div class="poles">
+          <span>Informe de entendimiento</span>
+          <span>Protocolo de ejecución</span>
+        </div>
+        <div class="slider-row">
+          <input id="t3" type="range" min="1" max="5" step="1" value="3" />
+          <div class="slider-value" id="t3-value">3/5</div>
+        </div>
+        <div class="current-label">Estado: <span id="t3-label">Plano Blueprint</span></div>
+      </div>
+    </div>
+
+    <div class="section-title">Rotaciones - Actitud de vuelo y exigencia</div>
+    <div class="panel-grid">
+      <!-- R1 SELECTOR DE PERFIL DE PILOTAJE -->
+      <div class="card">
+        <div class="tag">R1 · Perfil de pilotaje</div>
+        <h2>Selector de perfil de pilotaje</h2>
+        <div class="poles">
+          <span>Pilota creativa</span>
+          <span>Pilota experta</span>
+        </div>
+        <div class="slider-row">
+          <input id="r1" type="range" min="1" max="5" step="1" value="3" />
+          <div class="slider-value" id="r1-value">3/5</div>
+        </div>
+        <div class="current-label">Estado: <span id="r1-label">Perfil Híbrido</span></div>
+      </div>
+
+      <!-- R2 CONTROL DE ACTITUD DE RAZONAMIENTO -->
+      <div class="card">
+        <div class="tag">R2 · Actitud de razonamiento</div>
+        <h2>Control de actitud de razonamiento</h2>
+        <div class="poles">
+          <span>Actitud abierta</span>
+          <span>Actitud lineal</span>
+        </div>
+        <div class="slider-row">
+          <input id="r2" type="range" min="1" max="5" step="1" value="3" />
+          <div class="slider-value" id="r2-value">3/5</div>
+        </div>
+        <div class="current-label">Estado: <span id="r2-label">Actitud Balanceada</span></div>
+      </div>
+
+      <!-- R3 REGULADOR DE EXIGENCIA DE VUELO -->
+      <div class="card">
+        <div class="tag">R3 · Exigencia de vuelo</div>
+        <h2>Regulador de exigencia de vuelo</h2>
+        <div class="poles">
+          <span>Vuelo fluido</span>
+          <span>Alta precisión</span>
+        </div>
+        <div class="slider-row">
+          <input id="r3" type="range" min="1" max="5" step="1" value="3" />
+          <div class="slider-value" id="r3-value">3/5</div>
+        </div>
+        <div class="current-label">Estado: <span id="r3-label">Estándar de Misión</span></div>
+      </div>
+    </div>
+
+    <div class="section-title">Instrucción mínima</div>
+    <textarea id="min-instruction" placeholder="Ejemplo: Necesito una estrategia de lanzamiento para una fintech B2B en Latam."></textarea>
+    <div class="hint">
+      Escribí solo el pedido en lenguaje natural. La telemetría se encarga del comportamiento de la IA.
+    </div>
+
+    <div class="dock-row">
+      <small>Al hacer Dock se genera un JSON y un pre prompt en texto natural. Podés usar cualquiera de los dos como producto final para pegar en una IA.</small>
+      <button id="dock-btn">
+        <span class="icon">🛰️</span>
+        Dock - Emitir JSON y pre prompt
+      </button>
+    </div>
+
+    <div class="section-title">JSON de telemetría generado</div>
+    <textarea id="output-json" readonly></textarea>
+    <div class="hint">
+      Útil para agentes, APIs o flujos técnicos. Contiene la foto completa de la configuración 6DoF más la instrucción mínima.
+    </div>
+
+    <div class="section-title">Pre prompt generado - Pegar directo en la IA</div>
+    <textarea id="output-prompt" readonly></textarea>
+    <div class="hint">
+      Copiá y pegá esto en la IA. Si querés, editá el texto pero mantené la lógica de las configuraciones y el modo operativo.
+    </div>
+  </div>
+
+  <script>
+    const configMap = {
+      t1: {
+        labelId: "t1-label",
+        valueId: "t1-value",
+        states: [
+          "Exploración Amplia",
+          "Exploración Dirigida",
+          "Equilibrio de Rumbo",
+          "Resolución Dirigida",
+          "Resolución Final Bloqueada"
+        ],
+        polos: {
+          inicio: "Exploración",
+          fin: "Resolución"
+        },
+        nombre: "Control de vector de misión"
+      },
+      t2: {
+        labelId: "t2-label",
+        valueId: "t2-value",
+        states: [
+          "Órbita Alta Conceptual",
+          "Capa Conceptual Aplicada",
+          "Altitud Media Estable",
+          "Aproximación Operativa",
+          "Contacto Directo con Terreno"
+        ],
+        polos: {
+          inicio: "Órbita conceptual",
+          fin: "Superficie operativa"
+        },
+        nombre: "Sistema de altitud contextual"
+      },
+      t3: {
+        labelId: "t3-label",
+        valueId: "t3-value",
+        states: [
+          "Insight Profundo",
+          "Marco de Comprensión",
+          "Plano Blueprint",
+          "Plan de Acción",
+          "Instrucciones Directas de Ejecución"
+        ],
+        polos: {
+          inicio: "Informe de entendimiento",
+          fin: "Protocolo de ejecución"
+        },
+        nombre: "Configurador de modo de entrega"
+      },
+      r1: {
+        labelId: "r1-label",
+        valueId: "r1-value",
+        states: [
+          "Creativa Libre",
+          "Creativa Controlada",
+          "Perfil Híbrido",
+          "Experta Flexible",
+          "Experta Total"
+        ],
+        polos: {
+          inicio: "Pilota creativa",
+          fin: "Pilota experta"
+        },
+        nombre: "Selector de perfil de pilotaje"
+      },
+      r2: {
+        labelId: "r2-label",
+        valueId: "r2-value",
+        states: [
+          "Deriva Abierta",
+          "Flujo Guiado",
+          "Actitud Balanceada",
+          "Trayectoria Estructurada",
+          "Precisión Lógica Bloqueada"
+        ],
+        polos: {
+          inicio: "Actitud abierta",
+          fin: "Actitud lineal"
+        },
+        nombre: "Control de actitud de razonamiento"
+      },
+      r3: {
+        labelId: "r3-label",
+        valueId: "r3-value",
+        states: [
+          "Flujo Libre",
+          "Control Moderado",
+          "Estándar de Misión",
+          "Alta Integridad",
+          "Precisión Crítica"
+        ],
+        polos: {
+          inicio: "Vuelo fluido",
+          fin: "Vuelo de alta precisión"
+        },
+        nombre: "Regulador de exigencia de vuelo"
+      }
+    };
+
+    function attachSlider(id) {
+      const slider = document.getElementById(id);
+      const cfg = configMap[id];
+      const labelEl = document.getElementById(cfg.labelId);
+      const valueEl = document.getElementById(cfg.valueId);
+
+      function update() {
+        const val = parseInt(slider.value, 10);
+        const idx = val - 1;
+        labelEl.textContent = cfg.states[idx];
+        valueEl.textContent = val + "/5";
+      }
+
+      slider.addEventListener("input", update);
+      update();
+    }
+
+    ["t1", "t2", "t3", "r1", "r2", "r3"].forEach(attachSlider);
+
+    function collectConfig() {
+      const config = {};
+      for (const key of ["t1", "t2", "t3", "r1", "r2", "r3"]) {
+        const slider = document.getElementById(key);
+        const cfg = configMap[key];
+        const val = parseInt(slider.value, 10);
+        const idx = val - 1;
+        config[key] = {
+          nombre_control: cfg.nombre,
+          valor_slider: val,
+          estado: cfg.states[idx],
+          polo_inicio: cfg.polos.inicio,
+          polo_fin: cfg.polos.fin
+        };
+      }
+      return config;
+    }
+
+    function buildNaturalPrompt(config, minInstructionRaw) {
+      const minInstruction = minInstructionRaw && minInstructionRaw.trim().length > 0
+        ? minInstructionRaw.trim()
+        : "[AGREGAR AQUÍ LA INSTRUCCIÓN MÍNIMA DEL USUARIO]";
+
+      const p = [];
+
+      p.push("Quiero que operes como una nave cognitiva usando esta telemetría 6DoF fija. No tomes estas configuraciones como sugerencias, sino como restricciones estrictas de navegación y respuesta.");
+      p.push("");
+      p.push("TRASLACIONES - Rumbo y entrega");
+
+      p.push(`1 · ${config.t1.nombre_control}`);
+      p.push(`   Estado seleccionado: ${config.t1.estado} (entre "${config.t1.polo_inicio}" y "${config.t1.polo_fin}").`);
+
+      p.push(`2 · ${config.t2.nombre_control}`);
+      p.push(`   Estado seleccionado: ${config.t2.estado} (entre "${config.t2.polo_inicio}" y "${config.t2.polo_fin}").`);
+
+      p.push(`3 · ${config.t3.nombre_control}`);
+      p.push(`   Estado seleccionado: ${config.t3.estado} (entre "${config.t3.polo_inicio}" y "${config.t3.polo_fin}").`);
+
+      p.push("");
+      p.push("ROTACIONES - Actitud de vuelo y exigencia");
+
+      p.push(`4 · ${config.r1.nombre_control}`);
+      p.push(`   Estado seleccionado: ${config.r1.estado} (entre "${config.r1.polo_inicio}" y "${config.r1.polo_fin}").`);
+
+      p.push(`5 · ${config.r2.nombre_control}`);
+      p.push(`   Estado seleccionado: ${config.r2.estado} (entre "${config.r2.polo_inicio}" y "${config.r2.polo_fin}").`);
+
+      p.push(`6 · ${config.r3.nombre_control}`);
+      p.push(`   Estado seleccionado: ${config.r3.estado} (entre "${config.r3.polo_inicio}" y "${config.r3.polo_fin}").`);
+
+      p.push("");
+      p.push("MODO OPERATIVO OBLIGATORIO");
+      p.push("1 Interpretá la instrucción mínima del usuario.");
+      p.push("2 Construí internamente el mejor prompt posible alineado estrictamente a esta telemetría de traslaciones y rotaciones.");
+      p.push("3 Ejecutá ese prompt interno.");
+      p.push("4 Entregá un resultado final listo para usar que respete el tipo de salida configurado en el Configurador de modo de entrega.");
+      p.push("5 Aplicá el nivel de exigencia de calidad definido por el Regulador de exigencia de vuelo.");
+      p.push("6 Si falta información, usá inferencias responsables y explicá brevemente los supuestos críticos que asumas.");
+
+      p.push("");
+      p.push("INSTRUCCIÓN MÍNIMA DEL USUARIO");
+      p.push(minInstruction);
+
+      return p.join("\n");
+    }
+
+    function buildJsonAndPrompt() {
+      const minInstruction = document.getElementById("min-instruction").value.trim();
+      const config = collectConfig();
+
+      const jsonPayload = {
+        meta: "Telemetría 6DoF para calibrar la generación de respuestas de una IA como si fuera una nave cognitiva. La IA debe usar estos estados como restricciones mandatorias, no como sugerencias.",
+        instrucciones_para_ia: "Leé el objeto 'config' para entender cómo debe ser tu rumbo, tu actitud de vuelo, el tipo de salida que se espera y el nivel de exigencia. Después tomá 'instruccion_minima' y generá el mejor resultado posible alineado estrictamente a la configuración.",
+        config: config,
+        instruccion_minima: minInstruction || "[AGREGAR AQUÍ LA INSTRUCCIÓN MÍNIMA DEL USUARIO]"
+      };
+
+      const outputJsonEl = document.getElementById("output-json");
+      outputJsonEl.value = JSON.stringify(jsonPayload, null, 2);
+
+      const promptText = buildNaturalPrompt(config, minInstruction);
+      const outputPromptEl = document.getElementById("output-prompt");
+      outputPromptEl.value = promptText;
+    }
+
+    document.getElementById("dock-btn").addEventListener("click", buildJsonAndPrompt);
+  </script>
+</body>
+</html>
+

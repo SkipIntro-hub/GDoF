@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adapteza 6DoF · Command Center MVP (Clean Vector)</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%;
+            background: #fff; cursor: pointer; margin-top: -7px; 
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: #334155; border-radius: 2px;
+        }
+        
+        .stage-glow-libre { box-shadow: 0 0 30px rgba(16, 185, 129, 0.15); border-color: #10b981; }
+        .stage-glow-precision { box-shadow: 0 0 30px rgba(245, 158, 11, 0.15); border-color: #f59e0b; }
+        .stage-glow-ejecucion { box-shadow: 0 0 30px rgba(239, 68, 68, 0.15); border-color: #ef4444; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        const STAGES = {
+          libre: {
+            id: "libre",
+            name: "LIBRE",
+            color: "#10b981", 
+            freedoms: 6,
+            short: "Explorar",
+            manifesto: "Exploración total. Radar activo 360°.",
+          },
+          precision: {
+            id: "precision",
+            name: "PRECISIÓN",
+            color: "#f59e0b",
+            freedoms: 3,
+            short: "Alinear",
+            manifesto: "Alineación de coordenadas. Foco en objetivo.",
+          },
+          ejecucion: {
+            id: "ejecucion",
+            name: "EJECUCIÓN",
+            color: "#ef4444", 
+            freedoms: 1,
+            short: "Impactar",
+            manifesto: "Movimiento mínimo, impacto máximo.",
+          },
+        };
+
+        const STAGE_ORDER = ["libre", "precision", "ejecucion"];
+
+        function getAxisLabel(axis, val) {
+            if (axis === 'x') {
+                if (val < 30) return "Apertura";
+                if (val > 70) return "Foco";
+                return "Balance";
+            }
+            if (axis === 'y') {
+                if (val < 30) return "Concepto";
+                if (val > 70) return "Forma";
+                return "Medio";
+            }
+            return "";
+        }
+
+        const OPTIONS = {
+          roll_enfoque: [
+            { value: "estrategico", label: "Estratégico" },
+            { value: "creativo", label: "Creativo" },
+            { value: "tecnico", label: "Técnico" },
+            { value: "comercial", label: "Comercial" },
+            { value: "operativo", label: "Operativo" },
+          ],
+          pitch_concrecion: [
+            { value: "conceptual", label: "Alta Abstracción (Visión)" },
+            { value: "medio", label: "Media (Modelo)" },
+            { value: "accion", label: "Baja Abstracción (Acción)" },
+          ],
+          yaw_intencion: [
+            { value: "explorar", label: "Explorar" },
+            { value: "resolver", label: "Resolver" },
+            { value: "convencer", label: "Convencer" },
+            { value: "optimizar", label: "Optimizar" },
+            { value: "ejecutar", label: "Ejecutar" },
+          ],
+          acceleration: [
+            { value: "baja", label: "Baja" },
+            { value: "media", label: "Media" },
+            { value: "alta", label: "Alta" },
+          ],
+        };
+
+        function generateMissionPrompt(event, stageKey) {
+            const s = event[stageKey];
+            const meta = event.meta;
+            const stageInfo = STAGES[stageKey];
+            return `=== 6DoF MISSION PROTOCOL ===\nACT ROLE: IA Factory Agent\nSTAGE: ${stageInfo.name}\nCONTEXT: ${meta.contexto}\nOBJECTIVE: ${meta.proposito}\n\nCOORDINATES:\n- X (Scope): ${s.x_desafios}%\n- Y (Layer): ${s.y_habilidades}%\n- Z (Pace): ${s.acceleration.toUpperCase()}\n\nORIENTATION:\n- Intention: ${s.yaw_intencion.toUpperCase()}\n- Focus: ${s.roll_enfoque.toUpperCase()}\n\nINSTRUCTION: Execute based on these parameters.`.trim();
+        }
+
+        // --- COMPONENTE VISUAL CORREGIDO (Estilo Vector HUD) ---
+        function VectorCanvas({ stageKey, data }) {
+            const canvasRef = useRef(null);
+
+            useEffect(() => {
+                const cvs = canvasRef.current;
+                if(!cvs) return;
+                const ctx = cvs.getContext('2d');
+                
+                // Configuración Retina/HiDPI
+                const rect = cvs.getBoundingClientRect();
+                cvs.width = rect.width * 2;
+                cvs.height = rect.height * 2;
+                ctx.scale(2, 2);
+                
+                const w = rect.width;
+                const h = rect.height;
+                const color = STAGES[stageKey].color;
+
+                // 1. Limpiar y Fondo Grid
+                ctx.clearRect(0,0, w, h);
+                
+                // Dibujar Grid Sutil
+                ctx.strokeStyle = "rgba(148, 163, 184, 0.1)";
+                ctx.lineWidth = 1;
+                const gridSize = 40;
+                
+                // Mover origen ligeramente para efecto parallax si se desea, pero mantendremos estático por claridad
+                for(let x=0; x<=w; x+=gridSize) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
+                for(let y=0; y<=h; y+=gridSize) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+
+                // 2. Calcular Posición del Agente (X, Y Sliders)
+                // Margen para que no se pegue a los bordes
+                const padding = 60;
+                const usableW = w - padding * 2;
+                const usableH = h - padding * 2;
+                
+                const posX = padding + (data.x_desafios / 100) * usableW;
+                // Invertimos Y visualmente: 0% abajo, 100% arriba (como un gráfico cartesiano)
+                // O según PDF: Abajo (Concepto) -> Arriba (Forma). 
+                // Vamos a mapear 0% slider = Abajo visualmente.
+                const posY = (h - padding) - (data.y_habilidades / 100) * usableH;
+
+                // 3. Dibujar "Z" (La línea de profundidad/iteración)
+                // La línea vertical ancla el punto
+                ctx.beginPath();
+                ctx.strokeStyle = color;
+                ctx.globalAlpha = 0.3;
+                ctx.setLineDash([4, 4]);
+                ctx.moveTo(posX, posY);
+                ctx.lineTo(posX, h); // Línea hacia el "suelo"
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.globalAlpha = 1;
+
+                // 4. Lógica de Dirección (Yaw)
+                let angle = 0;
+                let spread = 0;
+                
+                if (stageKey === 'libre') {
+                    // Libre: Radar girando o muy abierto
+                    spread = Math.PI * 2; // 360 grados
+                    angle = -Math.PI / 2; // Apunta arriba por defecto
+                } else if (stageKey === 'precision') {
+                    // Precisión: Cono enfocado
+                    spread = Math.PI / 3; // 60 grados
+                    // Mapear intención a ángulo
+                    const mapYaw = {
+                        explorar: -Math.PI/2, // Arriba
+                        resolver: -Math.PI/4, // Diagonal Arriba-Der
+                        convencer: 0,         // Derecha
+                        optimizar: Math.PI/4, // Diagonal Abajo-Der
+                        ejecutar: Math.PI/2   // Abajo
+                    };
+                    angle = mapYaw[data.yaw_intencion] || -Math.PI/2;
+                } else {
+                    // Ejecución: Láser estrecho
+                    spread = 0.1; // Muy estrecho
+                    angle = Math.PI/2; // Siempre hacia abajo (impacto)
+                }
+
+                // 5. Dibujar el "Radar/Pulso" (Intención)
+                ctx.save();
+                ctx.translate(posX, posY);
+                ctx.rotate(angle);
+
+                if (stageKey === 'libre') {
+                    // Efecto Radar Sonar
+                    ctx.beginPath();
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 1;
+                    ctx.globalAlpha = 0.5;
+                    ctx.arc(0, 0, 25, 0, Math.PI * 2);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 45, 0, Math.PI * 2); // Segundo anillo
+                    ctx.globalAlpha = 0.2;
+                    ctx.stroke();
+
+                } else if (stageKey === 'precision') {
+                    // Efecto Cono Wi-Fi
+                    ctx.fillStyle = color;
+                    ctx.globalAlpha = 0.15;
+                    ctx.beginPath();
+                    ctx.moveTo(0,0);
+                    ctx.arc(0, 0, 60, -spread/2, spread/2);
+                    ctx.fill();
+                    
+                    // Arcos de señal
+                    ctx.strokeStyle = color;
+                    ctx.globalAlpha = 0.8;
+                    ctx.lineWidth = 2;
+                    for(let r=15; r<=45; r+=15) {
+                        ctx.beginPath();
+                        ctx.arc(0, 0, r, -spread/2, spread/2);
+                        ctx.stroke();
+                    }
+
+                } else if (stageKey === 'ejecucion') {
+                    // Efecto Láser / Vector de Ataque
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 3;
+                    ctx.shadowColor = color;
+                    ctx.shadowBlur = 10;
+                    ctx.beginPath();
+                    ctx.moveTo(0,0);
+                    ctx.lineTo(80, 0); // Línea larga recta (está rotada 90deg, se ve abajo)
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                    
+                    // Punta de flecha
+                    ctx.fillStyle = "#fff";
+                    ctx.beginPath();
+                    ctx.moveTo(85, 0);
+                    ctx.lineTo(75, -5);
+                    ctx.lineTo(75, 5);
+                    ctx.fill();
+                }
+                ctx.restore();
+
+                // 6. Dibujar el Agente (Punto Central)
+                // Glow
+                const glowSize = data.acceleration === 'alta' ? 15 : 8;
+                const grd = ctx.createRadialGradient(posX, posY, 2, posX, posY, glowSize);
+                grd.addColorStop(0, color);
+                grd.addColorStop(1, "rgba(0,0,0,0)");
+                ctx.fillStyle = grd;
+                ctx.globalAlpha = 0.6;
+                ctx.beginPath(); ctx.arc(posX, posY, glowSize, 0, Math.PI*2); ctx.fill();
+
+                // Core blanco
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = "#fff";
+                ctx.beginPath(); ctx.arc(posX, posY, 5, 0, Math.PI*2); ctx.fill();
+
+                // 7. Texto Flotante (HUD style)
+                ctx.font = "bold 10px JetBrains Mono";
+                ctx.fillStyle = "#fff";
+                ctx.fillText(`${getAxisLabel('x', data.x_desafios)}`, posX + 15, posY - 5);
+                
+                ctx.font = "10px Inter";
+                ctx.fillStyle = "rgba(255,255,255,0.7)";
+                ctx.fillText(`Z: ${data.z_iteracion}% (${data.acceleration})`, posX + 15, posY + 10);
+
+            }, [stageKey, data]);
+
+            return <canvas ref={canvasRef} className="w-full h-full" />;
+        }
+
+        // --- COMPONENTES UI AUXILIARES ---
+        function Card({ title, children, className="" }) {
+            return (
+                <div className={`bg-[#1e293b] border border-slate-700 rounded-xl overflow-hidden shadow-xl ${className}`}>
+                    <div className="bg-slate-800/50 px-4 py-3 border-b border-slate-700 flex justify-between items-center">
+                        <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">{title}</h3>
+                    </div>
+                    <div className="p-5">{children}</div>
+                </div>
+            );
+        }
+
+        function SliderControl({ label, value, onChange, leftLabel, rightLabel, disabled }) {
+            return (
+                <div className={`mb-6 ${disabled ? 'opacity-30 grayscale pointer-events-none' : ''}`}>
+                    <div className="flex justify-between text-xs font-bold text-slate-400 mb-2">
+                        <span>{label}</span>
+                        <span className="font-mono text-white">{value}%</span>
+                    </div>
+                    <input 
+                        type="range" min="0" max="100" value={value} 
+                        onChange={(e) => onChange(Number(e.target.value))}
+                        className="w-full mb-1"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-500 font-mono uppercase">
+                        <span>{leftLabel}</span>
+                        <span>{rightLabel}</span>
+                    </div>
+                </div>
+            );
+        }
+
+        function SelectControl({ label, value, options, onChange, disabled }) {
+            return (
+                <div className={`mb-4 ${disabled ? 'opacity-30 pointer-events-none' : ''}`}>
+                    <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">{label}</label>
+                    <div className="relative">
+                        <select 
+                            value={value} onChange={(e) => onChange(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-600 text-slate-200 text-sm rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500 appearance-none"
+                        >
+                            {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                            <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- MAIN APP ---
+        function App() {
+            const [event, setEvent] = useState({
+                meta: { contexto: "", proposito: "", output_final: "" },
+                libre: {
+                    x_desafios: 50, y_habilidades: 50, z_iteracion: 50,
+                    acceleration: "media", roll_enfoque: "estrategico", pitch_concrecion: "conceptual", yaw_intencion: "explorar"
+                },
+                precision: {
+                    x_desafios: 50, y_habilidades: 50, z_iteracion: 50,
+                    acceleration: "media", roll_enfoque: "estrategico", pitch_concrecion: "medio", yaw_intencion: "resolver"
+                },
+                ejecucion: {
+                    x_desafios: 50, y_habilidades: 80, z_iteracion: 90,
+                    acceleration: "alta", roll_enfoque: "operativo", pitch_concrecion: "accion", yaw_intencion: "ejecutar",
+                    output_final: ""
+                },
+                stage: "libre"
+            });
+
+            const stageKey = event.stage;
+            const sData = event[stageKey];
+            const sInfo = STAGES[stageKey];
+
+            const updateMeta = (k, v) => setEvent(prev => ({...prev, meta: {...prev.meta, [k]: v}}));
+            const updateStage = (k, v) => setEvent(prev => ({...prev, [stageKey]: {...prev[stageKey], [k]: v}}));
+            
+            const nextStage = () => {
+                const idx = STAGE_ORDER.indexOf(stageKey);
+                if (idx < 2) setEvent(prev => ({ ...prev, stage: STAGE_ORDER[idx + 1] }));
+            };
+            const prevStage = () => {
+                const idx = STAGE_ORDER.indexOf(stageKey);
+                if (idx > 0) setEvent(prev => ({ ...prev, stage: STAGE_ORDER[idx - 1] }));
+            };
+
+            const copyPrompt = () => {
+                if (stageKey === 'ejecucion' && !event.ejecucion.output_final) {
+                    alert("⚠️ ALERTA: Define el Output Final antes de ejecutar.");
+                    return;
+                }
+                const prompt = generateMissionPrompt(event, stageKey);
+                navigator.clipboard.writeText(prompt);
+                alert("✅ Prompt copiado.");
+            };
+
+            return (
+                <div className="min-h-screen pb-20">
+                    <nav className="border-b border-slate-800 bg-[#0f172a] sticky top-0 z-50">
+                        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></div>
+                                <h1 className="text-lg font-bold tracking-tight text-white">6DoF <span className="text-slate-500 font-mono text-sm">| ADAPTEZA SYSTEM</span></h1>
+                            </div>
+                            <div className="flex gap-2">
+                                {STAGE_ORDER.map(s => (
+                                    <div key={s} className={`px-3 py-1 rounded text-xs font-bold uppercase transition-colors ${stageKey === s ? 'bg-slate-700 text-white' : 'text-slate-600'}`}>
+                                        {STAGES[s].short}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </nav>
+
+                    <main className="max-w-7xl mx-auto px-4 py-8 grid lg:grid-cols-12 gap-8">
+                        <div className="lg:col-span-5 space-y-6">
+                            <div className={`relative aspect-square bg-slate-900 rounded-2xl border-2 overflow-hidden transition-all duration-500 stage-glow-${stageKey}`}>
+                                <div className="absolute inset-0 p-4">
+                                    <VectorCanvas stageKey={stageKey} data={sData} />
+                                </div>
+                                <div className="absolute top-4 left-4">
+                                    <div className="text-[10px] font-mono text-slate-400">STATUS</div>
+                                    <div className="text-xl font-black uppercase" style={{color: sInfo.color}}>{sInfo.name}</div>
+                                </div>
+                                <div className="absolute bottom-4 left-4 right-4">
+                                    <div className="text-[10px] font-mono text-slate-400 mb-1">MANIFESTO</div>
+                                    <div className="text-sm font-medium text-white leading-tight">"{sInfo.manifesto}"</div>
+                                </div>
+                                <div className="absolute top-4 right-4 text-right">
+                                    <div className="text-[10px] font-mono text-slate-400">DoF</div>
+                                    <div className="text-2xl font-mono text-white">{sInfo.freedoms}/6</div>
+                                </div>
+                            </div>
+
+                            <Card title="Contexto de Misión">
+                                <div className="space-y-4">
+                                    <textarea className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:border-slate-500 outline-none resize-none h-20" placeholder="Contexto..." value={event.meta.contexto} onChange={e => updateMeta('contexto', e.target.value)}></textarea>
+                                    <input type="text" className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:border-slate-500 outline-none" placeholder="Propósito..." value={event.meta.proposito} onChange={e => updateMeta('proposito', e.target.value)} />
+                                </div>
+                            </Card>
+                            <button onClick={copyPrompt} className="w-full py-4 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-3 transition-all">
+                                <span>🤖 GENERAR INSTRUCCIÓN PARA IA</span>
+                            </button>
+                        </div>
+
+                        <div className="lg:col-span-7 space-y-6">
+                            <div className="flex items-center justify-between mb-2">
+                                <button onClick={prevStage} disabled={stageKey === 'libre'} className="text-xs font-bold text-slate-500 hover:text-white disabled:opacity-20">← ANTERIOR</button>
+                                <button onClick={nextStage} disabled={stageKey === 'ejecucion'} className="text-xs font-bold text-emerald-400 hover:text-emerald-300 disabled:opacity-20">SIGUIENTE ETAPA →</button>
+                            </div>
+
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <Card title="Coordenadas (Espacio)">
+                                    <SliderControl label="X - DESAFÍOS" value={sData.x_desafios} onChange={v => updateStage('x_desafios', v)} leftLabel="Apertura" rightLabel="Foco" disabled={sInfo.freedoms < 3} />
+                                    <SliderControl label="Y - HABILIDADES" value={sData.y_habilidades} onChange={v => updateStage('y_habilidades', v)} leftLabel="Concepto" rightLabel="Forma" disabled={sInfo.freedoms < 3} />
+                                    <SliderControl label="Z - ITERACIÓN" value={sData.z_iteracion} onChange={v => updateStage('z_iteracion', v)} leftLabel="Revisar" rightLabel="Avanzar" disabled={sInfo.freedoms < 1} />
+                                    <div className="mt-4"><SelectControl label="Aceleración (Z)" value={sData.acceleration} options={OPTIONS.acceleration} onChange={v => updateStage('acceleration', v)} /></div>
+                                </Card>
+
+                                <Card title="Orientación (Actitud)">
+                                    <SelectControl label="Roll - Enfoque" value={sData.roll_enfoque} options={OPTIONS.roll_enfoque} onChange={v => updateStage('roll_enfoque', v)} disabled={sInfo.freedoms < 6} />
+                                    <SelectControl label="Pitch - Concreción" value={sData.pitch_concrecion} options={OPTIONS.pitch_concrecion} onChange={v => updateStage('pitch_concrecion', v)} disabled={sInfo.freedoms < 3} />
+                                    <SelectControl label="Yaw - Intención" value={sData.yaw_intencion} options={OPTIONS.yaw_intencion} onChange={v => updateStage('yaw_intencion', v)} disabled={sInfo.freedoms < 1} />
+                                </Card>
+                            </div>
+                            
+                            {stageKey === 'ejecucion' && (
+                                <div className="bg-red-500/10 border border-red-500/50 rounded-xl p-6">
+                                    <div className="flex items-center gap-2 mb-3 text-red-400"><span className="font-bold uppercase text-sm">Output Final</span></div>
+                                    <input type="text" className="w-full bg-slate-900 border border-red-500/30 text-white rounded-lg p-3 outline-none" placeholder="Entregable final..." value={event.ejecucion.output_final} onChange={e => setEvent(p => ({...p, ejecucion: {...p.ejecucion, output_final: e.target.value}}))} />
+                                </div>
+                            )}
+                        </div>
+                    </main>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

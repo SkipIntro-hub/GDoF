@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>6DoF Prompt Builder</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #020617;
+      --secondary: #0f172a;
+      --accent: #38bdf8;
+      --accent2: #22c55e;
+      --text: #e5e7eb;
+      --text-dim: #9ca3af;
+      --border: #1f293b;
+      --warning: #f59e0b;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: radial-gradient(circle at top, var(--primary) 0, var(--primary) 100%);
+      color: var(--text);
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container { max-width: 1400px; margin: 0 auto; }
+
+    /* Header */
+    header {
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h1 {
+      font-size: 28px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    /* Layout */
+    .main-layout {
+      display: grid;
+      grid-template-columns: 340px 340px 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    /* Panel */
+    .panel {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      backdrop-filter: blur(10px);
+    }
+
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin: 20px 0 12px;
+      font-weight: 600;
+    }
+
+    .section-title:first-child { margin-top: 0; }
+
+    /* Preset Selector */
+    .preset-selector { margin-bottom: 20px; }
+
+    .preset-selector label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    select {
+      width: 100%;
+      padding: 10px;
+      background: var(--primary);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    select:focus { outline: none; border-color: var(--accent); }
+
+    /* Axis Control */
+    .axis-control {
+      margin-bottom: 20px;
+      padding: 14px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      position: relative;
+    }
+
+    .axis-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .axis-title-group {
+      flex: 1;
+    }
+
+    .axis-tag {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+
+    .axis-name {
+      font-size: 15px;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .axis-value {
+      font-size: 14px;
+      color: var(--text);
+      font-weight: 600;
+      background: rgba(56, 189, 248, 0.15);
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+
+    .axis-poles {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-dim);
+      margin: 8px 0;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 4px;
+      background: var(--primary);
+      outline: none;
+      box-shadow: inset 0 0 0 1px var(--border);
+      margin: 8px 0;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      border: 2px solid var(--primary);
+      box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.3);
+    }
+
+    .axis-state {
+      text-align: center;
+      font-size: 12px;
+      color: var(--accent2);
+      font-weight: 500;
+      margin-top: 6px;
+      padding: 4px;
+      background: rgba(34, 197, 94, 0.1);
+      border-radius: 4px;
+    }
+
+    .help-icon {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      background: var(--accent);
+      color: var(--primary);
+      border-radius: 50%;
+      text-align: center;
+      line-height: 16px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: help;
+      margin-left: 6px;
+      position: relative;
+    }
+
+    .help-icon:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 120%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--secondary);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 11px;
+      white-space: nowrap;
+      z-index: 100;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Instruction */
+    .instruction-block { margin-top: 20px; }
+
+    textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 10px;
+      background: var(--primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      resize: vertical;
+    }
+
+    textarea:focus { outline: none; border-color: var(--accent); }
+
+    .hint {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    /* Dock Button */
+    .dock-button {
+      width: 100%;
+      margin-top: 16px;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: var(--primary);
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      box-shadow: 0 8px 20px rgba(56, 189, 248, 0.3);
+    }
+
+    .dock-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(56, 189, 248, 0.4);
+    }
+
+    /* Visualization */
+    .viz-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      backdrop-filter: blur(10px);
+      margin-bottom: 20px;
+    }
+
+    .viz-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .viz-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 280px;
+      margin-bottom: 16px;
+    }
+
+    .coherence-display {
+      display: flex;
+      gap: 16px;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+    }
+
+    .coherence-item { flex: 1; }
+
+    .coherence-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+
+    .coherence-value {
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .coherence-value.high { color: var(--accent2); }
+    .coherence-value.medium { color: var(--warning); }
+    .coherence-value.low { color: #ef4444; }
+
+    /* Output */
+    .output-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .output-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      backdrop-filter: blur(10px);
+    }
+
+    .output-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .output-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .btn-copy {
+      padding: 6px 12px;
+      font-size: 11px;
+      background: var(--accent);
+      color: var(--primary);
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .btn-copy:hover { background: var(--accent2); }
+
+    .output-content {
+      min-height: 200px;
+      max-height: 500px;
+      overflow-y: auto;
+      padding: 12px;
+      background: var(--primary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      color: var(--text-dim);
+    }
+
+    @media (max-width: 1200px) {
+      .main-layout { 
+        grid-template-columns: 1fr; 
+      }
+      .output-section { 
+        grid-template-columns: 1fr; 
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>6DoF Prompt Builder</h1>
+      <div class="subtitle">
+        Sistema 6DoF: 3 Traslaciones (QUÉ trabajar) + 3 Rotaciones (CÓMO trabajar) = Control completo del comportamiento de la IA.
+      </div>
+    </header>
+
+    <div class="main-layout">
+      <!-- LEFT PANEL: Traslaciones -->
+      <div class="panel">
+        <div class="preset-selector">
+          <label>Presets</label>
+          <select id="preset-select" onchange="loadPreset()">
+            <option value="custom">Custom</option>
+            <option value="explorer">🔭 Explorer</option>
+            <option value="strategist">🏛️ Strategist</option>
+            <option value="executor">⚡ Executor</option>
+            <option value="creative">🎨 Creative</option>
+            <option value="solver">🔧 Solver</option>
+            <option value="balanced">⚖️ Balanced</option>
+          </select>
+        </div>
+
+        <div class="section-title">
+          Traslaciones
+          <span class="help-icon" data-tooltip="Movimiento en el espacio: QUÉ vas a trabajar">?</span>
+        </div>
+
+        <!-- D1: ALCANCE -->
+        <div class="axis-control">
+          <div class="axis-header">
+            <div class="axis-title-group">
+              <div class="axis-tag">T1 · Eje X</div>
+              <div class="axis-name">
+                Alcance
+                <span class="help-icon" data-tooltip="Amplitud del foco: broad vs narrow">?</span>
+              </div>
+            </div>
+            <span class="axis-value" id="d1-value">3/5</span>
+          </div>
+          <div class="axis-poles">
+            <span>Exploratorio amplio</span>
+            <span>Foco preciso</span>
+          </div>
+          <input type="range" id="d1" min="1" max="5" step="1" value="3" oninput="updateAxis('d1')">
+          <div class="axis-state" id="d1-state">Balanceado</div>
+        </div>
+
+        <!-- D2: PROFUNDIDAD -->
+        <div class="axis-control">
+          <div class="axis-header">
+            <div class="axis-title-group">
+              <div class="axis-tag">T2 · Eje Y</div>
+              <div class="axis-name">
+                Profundidad
+                <span class="help-icon" data-tooltip="Nivel de abstracción: conceptual vs concreto">?</span>
+              </div>
+            </div>
+            <span class="axis-value" id="d2-value">3/5</span>
+          </div>
+          <div class="axis-poles">
+            <span>Conceptual abstracto</span>
+            <span>Práctico concreto</span>
+          </div>
+          <input type="range" id="d2" min="1" max="5" step="1" value="3" oninput="updateAxis('d2')">
+          <div class="axis-state" id="d2-state">Balance teoría-práctica</div>
+        </div>
+
+        <!-- D3: FORMATO -->
+        <div class="axis-control">
+          <div class="axis-header">
+            <div class="axis-title-group">
+              <div class="axis-tag">T3 · Eje Z</div>
+              <div class="axis-name">
+                Formato
+                <span class="help-icon" data-tooltip="Tipo de entrega: analysis vs action plan">?</span>
+              </div>
+            </div>
+            <span class="axis-value" id="d3-value">3/5</span>
+          </div>
+          <div class="axis-poles">
+            <span>Análisis</span>
+            <span>Plan de acción</span>
+          </div>
+          <input type="range" id="d3" min="1" max="5" step="1" value="3" oninput="updateAxis('d3')">
+          <div class="axis-state" id="d3-state">Framework estructurado</div>
+        </div>
+      </div>
+
+      <!-- RIGHT PANEL: Rotaciones -->
+      <div class="panel">
+        <div class="instruction-block" style="margin-top: 0;">
+          <div class="section-title" style="margin-top: 0;">Tu pedido (opcional)</div>
+          <textarea id="instruction" placeholder="Opcional: Podés especificar una tarea concreta, o dejarlo vacío para usar la config 6DoF sobre cualquier contenido que le pases después a la IA (archivos, texto, documentos, etc.)" style="min-height: 60px;"></textarea>
+          <div class="hint">
+            <strong>Con instrucción:</strong> Prompt específico para esa tarea.<br>
+            <strong>Sin instrucción:</strong> Meta-prompt que aplicás sobre cualquier input posterior.
+          </div>
+        </div>
+
+        <div class="section-title">
+          Rotaciones
+          <span class="help-icon" data-tooltip="Orientación y ajuste fino: CÓMO lo vas a trabajar">?</span>
+        </div>
+
+        <!-- D4: ESTILO -->
+        <div class="axis-control">
+          <div class="axis-header">
+            <div class="axis-title-group">
+              <div class="axis-tag">R1 · Roll</div>
+              <div class="axis-name">
+                Estilo
+                <span class="help-icon" data-tooltip="Tono de respuesta: creative vs expert">?</span>
+              </div>
+            </div>
+            <span class="axis-value" id="d4-value">3/5</span>
+          </div>
+          <div class="axis-poles">
+            <span>Creativo libre</span>
+            <span>Experto técnico</span>
+          </div>
+          <input type="range" id="d4" min="1" max="5" step="1" value="3" oninput="updateAxis('d4')">
+          <div class="axis-state" id="d4-state">Híbrido profesional</div>
+        </div>
+
+        <!-- D5: LÓGICA -->
+        <div class="axis-control">
+          <div class="axis-header">
+            <div class="axis-title-group">
+              <div class="axis-tag">R2 · Pitch</div>
+              <div class="axis-name">
+                Lógica
+                <span class="help-icon" data-tooltip="Estructura de razonamiento: open vs linear">?</span>
+              </div>
+            </div>
+            <span class="axis-value" id="d5-value">3/5</span>
+          </div>
+          <div class="axis-poles">
+            <span>Razonamiento abierto</span>
+            <span>Lógica lineal</span>
+          </div>
+          <input type="range" id="d5" min="1" max="5" step="1" value="3" oninput="updateAxis('d5')">
+          <div class="axis-state" id="d5-state">Estructurado flexible</div>
+        </div>
+
+        <!-- D6: RIGOR -->
+        <div class="axis-control">
+          <div class="axis-header">
+            <div class="axis-title-group">
+              <div class="axis-tag">R3 · Yaw</div>
+              <div class="axis-name">
+                Rigor
+                <span class="help-icon" data-tooltip="Nivel de precisión: fast vs validated">?</span>
+              </div>
+            </div>
+            <span class="axis-value" id="d6-value">3/5</span>
+          </div>
+          <div class="axis-poles">
+            <span>Rápido</span>
+            <span>Validado</span>
+          </div>
+          <input type="range" id="d6" min="1" max="5" step="1" value="3" oninput="updateAxis('d6')">
+          <div class="axis-state" id="d6-state">Calidad estándar</div>
+        </div>
+
+        <button class="dock-button" onclick="generate()">✨ Generar Prompt</button>
+      </div>
+
+      <!-- CENTER PANEL: Visualization & Outputs -->
+      <div>
+        <!-- Visualization -->
+        <div class="viz-card">
+          <div class="viz-header">
+            <span class="viz-title">
+              Configuración 6DoF
+              <span class="help-icon" data-tooltip="Azul = Traslaciones (espacio) | Verde = Rotaciones (orientación)">?</span>
+            </span>
+          </div>
+          <div class="chart-container">
+            <canvas id="radarChart"></canvas>
+          </div>
+          <div class="coherence-display">
+            <div class="coherence-item">
+              <div class="coherence-label">Coherencia</div>
+              <div class="coherence-value high" id="coherence-score">100%</div>
+            </div>
+            <div class="coherence-item">
+              <div class="coherence-label">Perfil</div>
+              <div class="coherence-value high" id="profile-match">Balanced</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dual Output -->
+        <div id="prompt-type-indicator" style="display: none; margin-bottom: 12px; padding: 10px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; font-size: 12px; text-align: center;">
+        </div>
+        
+        <div class="output-section">
+          <div class="output-card">
+            <div class="output-header">
+              <span class="output-title">📋 JSON Config</span>
+              <button class="btn-copy" onclick="copyJSON()">Copiar</button>
+            </div>
+            <div class="output-content" id="json-output">Ajustá las dimensiones y presioná "Generar Prompt"</div>
+            <div class="hint" style="margin-top: 8px;">
+              Pegá este JSON en la IA, luego agregá archivos o texto. La IA interpretará todo según la config 6DoF.
+            </div>
+          </div>
+
+          <div class="output-card">
+            <div class="output-header">
+              <span class="output-title">📝 Prompt Natural</span>
+              <button class="btn-copy" onclick="copyPrompt()">Copiar</button>
+            </div>
+            <div class="output-content" id="prompt-output">Ajustá las dimensiones y presioná "Generar Prompt"</div>
+            <div class="hint" style="margin-top: 8px;">
+              Pegá este prompt, luego agregá lo que necesites analizar (archivos, texto, links, etc.). La config 6DoF aplica sobre eso.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Configuration
+    const config = {
+      d1: {
+        name: "Alcance",
+        states: [
+          "Máxima amplitud exploratoria",
+          "Exploración dirigida",
+          "Balanceado",
+          "Enfoque específico",
+          "Máxima precisión"
+        ]
+      },
+      d2: {
+        name: "Profundidad",
+        states: [
+          "Altamente conceptual",
+          "Conceptual aplicado",
+          "Balance teoría-práctica",
+          "Orientado a ejecución",
+          "100% práctico"
+        ]
+      },
+      d3: {
+        name: "Formato",
+        states: [
+          "Insights y comprensión",
+          "Análisis estructurado",
+          "Framework estructurado",
+          "Plan de acción",
+          "Instrucciones paso a paso"
+        ]
+      },
+      d4: {
+        name: "Estilo",
+        states: [
+          "Máxima creatividad",
+          "Creativo con estructura",
+          "Híbrido profesional",
+          "Experto flexible",
+          "Experto técnico puro"
+        ]
+      },
+      d5: {
+        name: "Lógica",
+        states: [
+          "Pensamiento divergente",
+          "Exploración guiada",
+          "Estructurado flexible",
+          "Lógica secuencial",
+          "Máxima linealidad"
+        ]
+      },
+      d6: {
+        name: "Rigor",
+        states: [
+          "Flujo rápido",
+          "Control moderado",
+          "Calidad estándar",
+          "Alta integridad",
+          "Máxima precisión"
+        ]
+      }
+    };
+
+    const presets = {
+      'explorer': { d1: 1, d2: 1, d3: 2, d4: 2, d5: 2, d6: 2 },
+      'strategist': { d1: 2, d2: 2, d3: 3, d4: 3, d5: 3, d6: 3 },
+      'executor': { d1: 5, d2: 5, d3: 5, d4: 4, d5: 4, d6: 4 },
+      'creative': { d1: 1, d2: 3, d3: 3, d4: 1, d5: 2, d6: 2 },
+      'solver': { d1: 4, d2: 3, d3: 4, d4: 4, d5: 4, d6: 4 },
+      'balanced': { d1: 3, d2: 3, d3: 3, d4: 3, d5: 3, d6: 3 }
+    };
+
+    // Chart
+    let radarChart;
+
+    function initChart() {
+      const ctx = document.getElementById('radarChart').getContext('2d');
+      radarChart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: [
+            'T1: Alcance', 
+            'T2: Profundidad', 
+            'T3: Formato',
+            'R1: Estilo', 
+            'R2: Lógica', 
+            'R3: Rigor'
+          ],
+          datasets: [
+            {
+              label: 'Traslaciones',
+              data: [3, 3, 3, 0, 0, 0],
+              borderColor: 'rgba(56, 189, 248, 1)',
+              backgroundColor: 'rgba(56, 189, 248, 0.2)',
+              borderWidth: 2,
+              pointBackgroundColor: 'rgba(56, 189, 248, 1)',
+              pointBorderColor: '#fff',
+              pointHoverBackgroundColor: '#fff',
+              pointHoverBorderColor: 'rgba(56, 189, 248, 1)'
+            },
+            {
+              label: 'Rotaciones',
+              data: [0, 0, 0, 3, 3, 3],
+              borderColor: 'rgba(34, 197, 94, 1)',
+              backgroundColor: 'rgba(34, 197, 94, 0.2)',
+              borderWidth: 2,
+              pointBackgroundColor: 'rgba(34, 197, 94, 1)',
+              pointBorderColor: '#fff',
+              pointHoverBackgroundColor: '#fff',
+              pointHoverBorderColor: 'rgba(34, 197, 94, 1)'
+            }
+          ]
+        },
+        options: {
+          scales: {
+            r: {
+              min: 0,
+              max: 5,
+              ticks: { 
+                stepSize: 1, 
+                color: '#9ca3af',
+                backdropColor: 'transparent'
+              },
+              grid: { color: '#1f293b' },
+              pointLabels: { 
+                color: '#e5e7eb', 
+                font: { size: 11 }
+              },
+              angleLines: { color: '#1f293b' }
+            }
+          },
+          plugins: {
+            legend: { 
+              display: true,
+              position: 'bottom',
+              labels: {
+                color: '#e5e7eb',
+                font: { size: 11 },
+                padding: 12
+              }
+            }
+          },
+          maintainAspectRatio: true,
+          responsive: true
+        }
+      });
+    }
+
+    function updateChart() {
+      const values = ['d1', 'd2', 'd3', 'd4', 'd5', 'd6'].map(id => 
+        parseInt(document.getElementById(id).value)
+      );
+      
+      // Split into translations and rotations
+      radarChart.data.datasets[0].data = [values[0], values[1], values[2], 0, 0, 0];
+      radarChart.data.datasets[1].data = [0, 0, 0, values[3], values[4], values[5]];
+      radarChart.update();
+    }
+
+    function updateAxis(id) {
+      const value = parseInt(document.getElementById(id).value);
+      const idx = value - 1;
+      
+      document.getElementById(`${id}-value`).textContent = `${value}/5`;
+      document.getElementById(`${id}-state`).textContent = config[id].states[idx];
+      
+      updateChart();
+      validateCoherence();
+      
+      if (document.getElementById('preset-select').value !== 'custom') {
+        document.getElementById('preset-select').value = 'custom';
+      }
+    }
+
+    function loadPreset() {
+      const presetId = document.getElementById('preset-select').value;
+      if (presetId === 'custom') return;
+      
+      const preset = presets[presetId];
+      Object.keys(preset).forEach(key => {
+        document.getElementById(key).value = preset[key];
+        updateAxis(key);
+      });
+    }
+
+    function validateCoherence() {
+      const values = {
+        d1: parseInt(document.getElementById('d1').value),
+        d2: parseInt(document.getElementById('d2').value),
+        d3: parseInt(document.getElementById('d3').value),
+        d4: parseInt(document.getElementById('d4').value),
+        d5: parseInt(document.getElementById('d5').value),
+        d6: parseInt(document.getElementById('d6').value)
+      };
+
+      let score = 100;
+
+      // Simple validation rules
+      if (values.d1 <= 2 && values.d3 >= 4) score -= 15;
+      if (values.d2 <= 2 && values.d3 >= 4) score -= 15;
+      if (values.d6 >= 4 && values.d4 <= 2) score -= 10;
+      if (values.d5 >= 4 && values.d1 <= 2) score -= 10;
+
+      const scoreEl = document.getElementById('coherence-score');
+      scoreEl.textContent = `${Math.max(0, score)}%`;
+      scoreEl.className = 'coherence-value ' + (score >= 80 ? 'high' : score >= 60 ? 'medium' : 'low');
+
+      // Profile
+      const avg = (values.d1 + values.d2 + values.d3 + values.d4 + values.d5 + values.d6) / 6;
+      let profile = 'Balanced';
+      if (avg <= 2) profile = 'Explorer';
+      else if (avg >= 4) profile = 'Executor';
+      else if (values.d4 <= 2) profile = 'Creative';
+      else if (values.d4 >= 4) profile = 'Expert';
+      
+      document.getElementById('profile-match').textContent = profile;
+    }
+
+    function generate() {
+      const values = {
+        d1: parseInt(document.getElementById('d1').value),
+        d2: parseInt(document.getElementById('d2').value),
+        d3: parseInt(document.getElementById('d3').value),
+        d4: parseInt(document.getElementById('d4').value),
+        d5: parseInt(document.getElementById('d5').value),
+        d6: parseInt(document.getElementById('d6').value)
+      };
+
+      const instruction = document.getElementById('instruction').value.trim();
+      const hasInstruction = instruction.length > 0;
+
+      // Collect config with full details
+      const traslaciones = {};
+      const rotaciones = {};
+      
+      ['d1', 'd2', 'd3'].forEach(key => {
+        const idx = values[key] - 1;
+        traslaciones[key] = {
+          dimension: config[key].name,
+          nivel: values[key],
+          estado: config[key].states[idx]
+        };
+      });
+      
+      ['d4', 'd5', 'd6'].forEach(key => {
+        const idx = values[key] - 1;
+        rotaciones[key] = {
+          dimension: config[key].name,
+          nivel: values[key],
+          estado: config[key].states[idx]
+        };
+      });
+
+      // Generate JSON
+      const jsonPayload = {
+        version: "6DoF v4.0",
+        tipo: hasInstruction ? "prompt_especifico" : "meta_prompt_reutilizable",
+        timestamp: new Date().toISOString(),
+        traslaciones: traslaciones,
+        rotaciones: rotaciones,
+        instruccion_original: hasInstruction ? instruction : null,
+        nota_uso: hasInstruction 
+          ? "Este prompt tiene una instrucción específica incluida." 
+          : "Este meta-prompt se aplica a cualquier contenido que proporciones después: archivos adjuntos, texto, documentos, etc."
+      };
+
+      document.getElementById('json-output').textContent = JSON.stringify(jsonPayload, null, 2);
+
+      // Generate natural prompt
+      const lines = [];
+      
+      lines.push("Configuración 6DoF para aplicar en tu respuesta:");
+      lines.push("");
+      lines.push("TRASLACIONES (QUÉ trabajar):");
+      lines.push(`• Alcance: ${config['d1'].states[values.d1 - 1]}`);
+      lines.push(`• Profundidad: ${config['d2'].states[values.d2 - 1]}`);
+      lines.push(`• Formato: ${config['d3'].states[values.d3 - 1]}`);
+      lines.push("");
+      lines.push("ROTACIONES (CÓMO trabajar):");
+      lines.push(`• Estilo: ${config['d4'].states[values.d4 - 1]}`);
+      lines.push(`• Lógica: ${config['d5'].states[values.d5 - 1]}`);
+      lines.push(`• Rigor: ${config['d6'].states[values.d6 - 1]}`);
+      lines.push("");
+
+      if (hasInstruction) {
+        // Prompt específico
+        lines.push("TAREA ESPECÍFICA:");
+        lines.push(instruction);
+        lines.push("");
+        lines.push("Aplicá la configuración 6DoF anterior para resolver esta tarea.");
+      } else {
+        // Meta-prompt genérico
+        lines.push("MODO DE APLICACIÓN:");
+        lines.push("Aplicá esta configuración 6DoF a cualquier contenido que yo te proporcione a continuación.");
+        lines.push("");
+        lines.push("Esto puede incluir:");
+        lines.push("• Archivos adjuntos (PDF, imágenes, Excel, Word, etc.)");
+        lines.push("• Texto o información que escriba después de este prompt");
+        lines.push("• Documentos que necesite analizar o trabajar");
+        lines.push("• Cualquier input adicional que comparta");
+        lines.push("");
+        lines.push("Procesá ese contenido usando estrictamente los parámetros 6DoF definidos arriba.");
+      }
+
+      document.getElementById('prompt-output').textContent = lines.join("\n");
+
+      // Show type indicator
+      const indicator = document.getElementById('prompt-type-indicator');
+      indicator.style.display = 'block';
+      if (hasInstruction) {
+        indicator.innerHTML = '✅ <strong>Prompt Específico:</strong> Listo para ejecutar directamente con la tarea incluida.';
+        indicator.style.background = 'rgba(34, 197, 94, 0.1)';
+        indicator.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+      } else {
+        indicator.innerHTML = '🔄 <strong>Meta-Prompt Reutilizable:</strong> Pegá esto primero, después agregá archivos/texto/documentos.';
+        indicator.style.background = 'rgba(56, 189, 248, 0.1)';
+        indicator.style.borderColor = 'rgba(56, 189, 248, 0.3)';
+      }
+    }
+
+    function copyJSON() {
+      const content = document.getElementById('json-output').textContent;
+      navigator.clipboard.writeText(content);
+      alert('✅ JSON copiado');
+    }
+
+    function copyPrompt() {
+      const content = document.getElementById('prompt-output').textContent;
+      navigator.clipboard.writeText(content);
+      alert('✅ Prompt copiado');
+    }
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', () => {
+      initChart();
+      validateCoherence();
+      ['d1', 'd2', 'd3', 'd4', 'd5', 'd6'].forEach(updateAxis);
+    });
+  </script>
+</body>
+</html>
