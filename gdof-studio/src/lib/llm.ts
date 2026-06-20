@@ -113,13 +113,17 @@ export const callGemini = async (
     });
 
     // Map history to Gemini format (user -> user, assistant -> model)
+    // Find the first user message, as Gemini requires the first message to be from the 'user'
+    const firstUserIndex = history.findIndex(msg => msg.role === 'user');
+    const conversationHistory = firstUserIndex !== -1 ? history.slice(firstUserIndex) : history;
+
     // We only take the previous messages as history, excluding the last one
-    const geminiHistory = history.slice(0, -1).map(msg => ({
+    const geminiHistory = conversationHistory.slice(0, -1).map(msg => ({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.content }]
     }));
 
-    const lastMessage = history[history.length - 1].content;
+    const lastMessage = conversationHistory[conversationHistory.length - 1].content;
 
     const chat = model.startChat({
       history: geminiHistory,
@@ -142,7 +146,11 @@ export const callClaude = async (
   modelName: string = 'claude-3-5-sonnet-20241022'
 ): Promise<string> => {
   try {
-    const messages = history.map(msg => ({
+    // Claude requires the first message in the array to be from the 'user'
+    const firstUserIndex = history.findIndex(msg => msg.role === 'user');
+    const conversationHistory = firstUserIndex !== -1 ? history.slice(firstUserIndex) : history;
+
+    const messages = conversationHistory.map(msg => ({
       role: msg.role,
       content: msg.content
     }));
